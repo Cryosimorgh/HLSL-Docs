@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'playground/server.ps1'
+      - 'playground/circle-mask.hlsl'
+      - 'playground/gpu-visualizer.js'
       - 'playground/test-powershell.mjs'
       - 'Start-HLSL-Playground.ps1'
       - '.github/workflows/test-powershell-client.yml'
