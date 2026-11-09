@@ -148,10 +148,11 @@ dxc -dumpbin release.dxil
 ~~~hlsl
 StructuredBuffer<float> Source : register(t0);
 RWStructuredBuffer<float> Result : register(u0);
+cbuffer Config : register(b0) { uint count; uint3 pad; };
 [numthreads(128,1,1)]
 void CopyCoalesced(uint3 tid : SV_DispatchThreadID)
 {
-    if (tid.x >= count) return;  // count supplied by a cbuffer
+    if (tid.x >= count) return;
     Result[tid.x] = Source[tid.x];
 }
 ~~~
