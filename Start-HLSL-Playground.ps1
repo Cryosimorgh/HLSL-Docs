@@ -3,7 +3,7 @@
 # or global PATH changes are needed. Server binds to 127.0.0.1 only.
 # The browser tab owns a heartbeat lease and the server exits after it closes.
 [CmdletBinding()]
-param()
+param([switch]$NoBrowser)
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ServerScript = Join-Path $Root "playground\server.mjs"
@@ -81,7 +81,9 @@ try {
     }
     Write-Host "Starting HLSL Playground: $($info.url)" -ForegroundColor Cyan
     Write-Host "Compiler closes when the last tab closes or you press Close Playground."
-    Start-Process -FilePath $info.url
+    if (-not $NoBrowser) {
+        Start-Process -FilePath $info.url
+    }
 } catch {
     if ($Server -and -not $Server.HasExited) {
         Stop-Process -Id $Server.Id -Force -ErrorAction SilentlyContinue
