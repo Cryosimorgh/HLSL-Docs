@@ -4,6 +4,22 @@
 
 The offline mode is a small, dependency-free tutorial for learning what **HLSL compute shaders** do. It makes parameters and dispatch sizes visible before you build a full Direct3D 12 host application.
 
+## One-click Windows launcher (recommended)
+
+For the portable Windows ZIP, **no terminal commands or tool installation are required**:
+
+1. Download the [latest Windows portable release](https://github.com/Cryosimorgh/HLSL-Docs/releases).
+2. Extract the ZIP completely and double-click **Start-HLSL-Playground.cmd**.
+3. The launcher automatically starts its bundled Node/DXC/Naga local service on an available loopback port and opens the tutorial in your default browser.
+4. Press **Close playground & stop server**, or close the tab. The server and compiler child processes stop automatically when the last connected tab closes. A browser crash is handled by a heartbeat timeout (normally about 45 seconds).
+5. No global installation, persistent background service, scheduled task, or system PATH changes are made.
+
+A tab opened by Windows cannot always be physically closed by a webpage; the Close button ends the session and navigates it to a blank page. It does **not** close other browser tabs or the entire browser.
+
+### Source/advanced launcher
+
+The same Start-HLSL-Playground.cmd works from a source checkout **if Node.js, DXC and Naga are already installed**. It finds bundled versions first and then searches PATH, so downloading the portable ZIP is the simplest setup.
+
 ## Run it
 
 1. Download the repository ZIP via GitHub's **Code → Download ZIP** (or clone it).
@@ -40,7 +56,7 @@ Install Naga (requires Rust/Cargo):
 cargo install naga-cli --locked
 ~~~
 
-Install DXC from [Microsoft's releases](https://github.com/microsoft/DirectXShaderCompiler/releases), and ensure `dxc` and `naga` are on PATH. From the **repository root** run:
+For the **source/advanced mode only**, install DXC from [Microsoft's releases](https://github.com/microsoft/DirectXShaderCompiler/releases), and ensure `dxc` and `naga` are on PATH. From the **repository root** run:
 
 ~~~powershell
 node playground/server.mjs
