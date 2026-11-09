@@ -126,6 +126,14 @@ jobs:
           if (-not $ready) { throw 'Launcher did not create readiness marker' }
           $service = Get-Content -LiteralPath $ready.FullName -Raw | ConvertFrom-Json
           $session = Invoke-RestMethod -Uri "$($service.url)/api/session/open" -Method Post -ContentType 'application/json' -Body '{}'
+          # End-to-end integration: compile source THROUGH THE ZIG SERVER using
+          # the actual bundled DXC and prebuilt Naga (not separate CLI calls).
+          $hlsl = Get-Content -LiteralPath 'playground/particle-step.hlsl' -Raw
+          $compileBody = @{ source = $hlsl; entry = 'CSMain' } | ConvertTo-Json -Compress
+          $compiled = Invoke-RestMethod -Uri "$($service.url)/api/compile" -Method Post -ContentType 'application/json' -Body $compileBody
+          if (-not $compiled.wgsl -or $compiled.wgsl -notmatch '@compute') {
+            throw 'Zig backend failed to return converted compute WGSL'
+          }
           $payload = @{ token = $session.token } | ConvertTo-Json -Compress
           Invoke-RestMethod -Uri "$($service.url)/api/session/close" -Method Post -ContentType 'application/json' -Body $payload | Out-Null
           $stopped = $false
