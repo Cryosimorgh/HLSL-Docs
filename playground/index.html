@@ -8,7 +8,7 @@
 <style>
 :root{color-scheme:dark;font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:#0b1120;color:#ebf4ff}
 *{box-sizing:border-box}body{margin:0}.wrap{max-width:1390px;margin:0 auto;padding:24px}
-a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem);line-height:1.17;margin:6px 0 8px}h2{font-size:1.1rem;margin:0 0 12px}h3{font-size:.98rem;margin:0 0 8px}.eyebrow{color:#7dd3fc;text-transform:uppercase;letter-spacing:.1em;font-size:.73rem;font-weight:700}p{margin:7px 0 13px}.muted{color:#aac0d7;font-size:.9rem}.layout{display:grid;grid-template-columns:minmax(255px,310px) minmax(0,1fr);gap:16px;align-items:start}.panel{border:1px solid #293b53;border-radius:15px;background:#111c2f;padding:19px;min-width:0}.panel.controls{position:sticky;top:12px}.ctrl{margin:0 0 14px}.ctrl>label{display:flex;justify-content:space-between;gap:12px;font-size:.89rem;margin-bottom:5px}.ctrl output{font-variant-numeric:tabular-nums;color:#8ce7d0;font-weight:650}.ctrl input[type=range]{width:100%;accent-color:#58dbbf;cursor:pointer}.ctrl select{width:100%;font:inherit;background:#18283f;color:#e9f6ff;border:1px solid #45617c;border-radius:7px;padding:8px}.buttons{display:flex;flex-wrap:wrap;gap:8px}.buttons button,.primary{font:inherit;font-weight:650;cursor:pointer;background:#203852;color:#e7f9ff;border:1px solid #476680;border-radius:9px;padding:9px 13px}.buttons button:hover,.primary:hover{background:#30516c}.buttons .primary{background:#0f786d;border-color:#22b8a4}.buttons .primary:hover{background:#159887}.buttons button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #facc15;outline-offset:3px}canvas{display:block;width:100%;aspect-ratio:920/430;background:#081424;border-radius:10px;border:1px solid #38526c;touch-action:none;cursor:crosshair}.hint{margin:10px 0;font-size:.86rem;color:#b0cce4}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.stat{background:#172941;border:1px solid #2b425d;border-radius:9px;padding:10px}.stat strong{display:block;font-size:clamp(1.05rem,2vw,1.35rem);font-variant-numeric:tabular-nums}.stat span{font-size:.76rem;color:#a8c3d9}.notice{font-size:.85rem;min-height:24px;color:#9ce3ff}.group{border-radius:8px;border:1px solid #35506b;padding:8px;margin:7px 0}.group-title{display:flex;justify-content:space-between;font-size:.8rem;color:#bad6e8}.group-track{height:9px;background:#39455a;margin-top:6px;border-radius:5px;overflow:hidden}.group-filled{height:100%;background:#32d1af}.below{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(275px,.85fr);gap:16px;margin-top:16px}.code-panel{min-width:0}pre{overflow:auto;max-height:580px;background:#070e1a;border:1px solid #314661;border-radius:10px;padding:16px;tab-size:4;color:#ccebf8;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre}.steps{counter-reset:lab}.step{counter-increment:lab;border-top:1px solid #33445c;padding:13px 0}.step:before{content:counter(lab) ". ";color:#4de1c5;font-weight:800}.step strong{color:#f2f9ff}.step p{font-size:.9rem;margin:4px 0 0;color:#b9cde1}.foot{margin-top:18px;font-size:.87rem;color:#a7c1d6}.pill{display:inline-block;border:1px solid #326f77;color:#b1fff1;border-radius:99px;font-size:.75rem;padding:2px 9px;margin-left:8px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}@media(max-width:850px){.layout,.below{grid-template-columns:1fr}.panel.controls{position:static}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem);line-height:1.17;margin:6px 0 8px}h2{font-size:1.1rem;margin:0 0 12px}h3{font-size:.98rem;margin:0 0 8px}.eyebrow{color:#7dd3fc;text-transform:uppercase;letter-spacing:.1em;font-size:.73rem;font-weight:700}p{margin:7px 0 13px}.muted{color:#aac0d7;font-size:.9rem}.layout{display:grid;grid-template-columns:minmax(255px,310px) minmax(0,1fr);gap:16px;align-items:start}.panel{border:1px solid #293b53;border-radius:15px;background:#111c2f;padding:19px;min-width:0}.panel.controls{position:sticky;top:12px}.ctrl{margin:0 0 14px}.ctrl>label{display:flex;justify-content:space-between;gap:12px;font-size:.89rem;margin-bottom:5px}.ctrl output{font-variant-numeric:tabular-nums;color:#8ce7d0;font-weight:650}.ctrl input[type=range]{width:100%;accent-color:#58dbbf;cursor:pointer}.ctrl select{width:100%;font:inherit;background:#18283f;color:#e9f6ff;border:1px solid #45617c;border-radius:7px;padding:8px}.buttons{display:flex;flex-wrap:wrap;gap:8px}.buttons button,.primary{font:inherit;font-weight:650;cursor:pointer;background:#203852;color:#e7f9ff;border:1px solid #476680;border-radius:9px;padding:9px 13px}.buttons button:hover,.primary:hover{background:#30516c}.buttons .primary{background:#0f786d;border-color:#22b8a4}.buttons .primary:hover{background:#159887}.buttons button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #facc15;outline-offset:3px}canvas{display:block;width:100%;aspect-ratio:920/430;background:#081424;border-radius:10px;border:1px solid #38526c;touch-action:none;cursor:crosshair}.hint{margin:10px 0;font-size:.86rem;color:#b0cce4}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.stat{background:#172941;border:1px solid #2b425d;border-radius:9px;padding:10px}.stat strong{display:block;font-size:clamp(1.05rem,2vw,1.35rem);font-variant-numeric:tabular-nums}.stat span{font-size:.76rem;color:#a8c3d9}.notice{font-size:.85rem;min-height:24px;color:#9ce3ff}.group{border-radius:8px;border:1px solid #35506b;padding:8px;margin:7px 0}.group-title{display:flex;justify-content:space-between;font-size:.8rem;color:#bad6e8}.group-track{height:9px;background:#39455a;margin-top:6px;border-radius:5px;overflow:hidden}.group-filled{height:100%;background:#32d1af}.below{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(275px,.85fr);gap:16px;margin-top:16px}.code-panel{min-width:0}pre{overflow:auto;max-height:580px;background:#070e1a;border:1px solid #314661;border-radius:10px;padding:16px;tab-size:4;color:#ccebf8;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre}.steps{counter-reset:lab}.step{counter-increment:lab;border-top:1px solid #33445c;padding:13px 0}.step:before{content:counter(lab) ". ";color:#4de1c5;font-weight:800}.step strong{color:#f2f9ff}.step p{font-size:.9rem;margin:4px 0 0;color:#b9cde1}.foot{margin-top:18px;font-size:.87rem;color:#a7c1d6}.pill{display:inline-block;border:1px solid #326f77;color:#b1fff1;border-radius:99px;font-size:.75rem;padding:2px 9px;margin-left:8px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.code-editor,#bindings{display:block;width:100%;max-width:100%;min-width:100%;box-sizing:border-box;background:#070e1a;color:#ccebf8;border:1px solid #314661;border-radius:10px;padding:15px;font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;tab-size:4;resize:vertical;white-space:pre;overflow:auto}.code-editor{height:450px;min-height:180px;margin:12px 0}#bindings{height:220px;min-height:120px}.bindings-panel{margin:13px 0;border:1px solid #35506b;border-radius:8px;padding:11px}.bindings-panel summary{font-weight:650;cursor:pointer}.check-wgsl{display:inline-flex;align-items:center;gap:7px;cursor:pointer}.result-panel{max-height:340px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}#wgsl-output[hidden]{display:none}@media(max-width:850px){.layout,.below{grid-template-columns:1fr}.panel.controls{position:static}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
 </style>
 </head>
 <body>
@@ -49,11 +49,21 @@ a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem)
 </div>
 <div class="below">
 <section class="panel code-panel">
-<h2>4. Inspect the corresponding HLSL <span class="pill">DXC · cs_6_0</span></h2>
-<p class="muted">The code below is a real compute shader; changing thread-group size updates its macro and the comments report your current cbuffer values. The browser does not compile or dispatch it.</p>
-<div class="buttons"><button id="copy" type="button">Copy shader code</button><button id="download" type="button">Save .hlsl file</button></div>
-<pre id="code" aria-label="HLSL shader source"></pre>
-<p class="hint">Compile with <code>dxc -T cs_6_0 -E CSMain -Fo particle-step.dxil particle-step.hlsl</code>. You need a host program with b0, t0 and u0 bindings and a compute PSO to run it on a GPU.</p>
+<h2>4. Edit &amp; run HLSL <span class="pill">DXC · WebGPU</span></h2>
+<p class="muted">Edit the HLSL shader below. You can run supported compute shaders on a real GPU using the local DXC + Naga compiler bridge; the offline visualization above remains a JavaScript model.</p>
+<div class="buttons"><button id="copy" type="button">Copy code</button><button id="download" type="button">Save .hlsl</button><button id="restore-example" type="button">Reset example</button><button id="example-scale" type="button">Array example</button></div>
+<label class="sr-only" for="code">Editable HLSL compute shader source</label>
+<textarea id="code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable HLSL compute shader source"></textarea>
+<details class="bindings-panel"><summary>Buffer bindings and dispatch (editable JSON)</summary>
+<p class="muted">By default t0 → binding 0, u0 → binding 16, b0 → binding 32. Set input arrays, writable output byte sizes, workgroups and output types. Arbitrary compute shaders need matching host resources.</p>
+<label class="sr-only" for="bindings">JSON buffer layout and dispatch</label>
+<textarea id="bindings" spellcheck="false" aria-label="JSON buffer layout and dispatch"></textarea>
+</details>
+<div class="buttons"><button id="run-gpu" class="primary" type="button">Run on GPU</button><label class="hint check-wgsl"><input type="checkbox" id="show-wgsl"> Show generated WGSL</label></div>
+<p class="notice" id="compile-status" role="status" aria-live="polite"></p>
+<pre id="gpu-output" class="result-panel" aria-label="Compute shader output and errors">Output appears here after a GPU run.</pre>
+<pre id="wgsl-output" class="result-panel" aria-label="Translated WGSL source" hidden></pre>
+<p class="hint"><strong>To run:</strong> Install DXC (SPIR-V backend) and Naga CLI, then start <code>node playground/server.mjs</code> and visit <code>http://127.0.0.1:4173/</code> in a WebGPU browser. <a href="README.md">Setup guide</a>. <strong>Not all HLSL runs:</strong> this host supports compatible compute buffers, not arbitrary graphics, ray tracing or all D3D12 intrinsics.</p>
 </section>
 <section class="panel steps">
 <h2>5. Try three experiments</h2>
@@ -234,7 +244,7 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
             root.appendChild(card);
         });
     }
-    function shaderText() {
+    function exampleShaderText() {
         const original = document.getElementById("shader-source").textContent.trim();
         const header = "// Sample host cbuffer values: dt=" + (val("timestep") / 1000).toFixed(3) +
             ", gravity=" + val("gravity").toFixed(2) + ", bounce=" + val("bounce").toFixed(2) +
@@ -242,7 +252,11 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
             ", radius=" + radius.toFixed(3) + ", worldWidth=" + worldWidth.toFixed(6) + "\n";
         return header + original.replace("#define GROUP_SIZE 64", "#define GROUP_SIZE " + val("groupsize")) + "\n";
     }
-    function updateShader() { setText("code", shaderText()); }
+    function shaderText() { return document.getElementById("code").value; }
+    function updateShader() {
+        const node = document.getElementById("code");
+        if (!node.dataset.dirty) node.value = exampleShaderText();
+    }
     function draw() {
         const w = canvas.width, h = canvas.height;
         ctx.fillStyle = "#081424"; ctx.fillRect(0, 0, w, h);
@@ -370,10 +384,42 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
         showMessage("HLSL source saved. Compile it separately with DXC.");
     });
+    const codeEditor = document.getElementById("code");
+    codeEditor.addEventListener("input", function () { codeEditor.dataset.dirty = "1"; });
+    window.HLSLPlayground = {
+        config: function () { return {
+            count: balls.length, dt: val("timestep") / 1000,
+            gravity: val("gravity"), bounce: val("bounce"), drag: val("drag"),
+            radius: radius, worldWidth: worldWidth
+        }; },
+        particles: function () { return balls.map(function (b) {
+            return { x: b.x, y: b.y, vx: b.vx, vy: b.vy };
+        }); },
+        restoreExample: function () { codeEditor.dataset.dirty = ""; updateShader(); },
+        applyGpuParticles: function (values) {
+            if (values.length < balls.length * 4) throw Error("GPU output lacks all particle values.");
+            const next = balls.map(function (b, i) {
+                const k = i * 4, x = values[k], y = values[k + 1],
+                      vx = values[k + 2], vy = values[k + 3];
+                if (![x, y, vx, vy].every(Number.isFinite)) {
+                    throw Error("GPU generated non-finite particle state.");
+                }
+                return { x: Math.max(radius, Math.min(worldWidth - radius, x)),
+                         y: Math.max(radius, Math.min(1 - radius, y)),
+                         vx: vx, vy: vy, id: b.id };
+            });
+            balls = next;
+            paused = true;
+            document.getElementById("pause").textContent = "Resume";
+            updateStats();
+            showMessage("GPU result displayed; JavaScript simulation paused.");
+        }
+    };
     reset();
     updateShader();
     requestAnimationFrame(frame);
 })();
 </script>
+<script src="live-runner.js" defer></script>
 </body>
 </html>
