@@ -8,6 +8,24 @@ Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, an
 
 > Independent learning resource; **not official Microsoft documentation**. Focus: modern Direct3D 12 + DXC + SM6.x. Differences for D3D11/FXC and newer hardware features are explicitly marked. Last reviewed: **9 November 2026**.
 
+## Learn interactively and use the Agent Skill
+
+| Resource | Use it for |
+| --- | --- |
+| **[HLSL Engineer Agent Skill](.agents/skills/hlsl-engineer/SKILL.md)** | Reusable Codex/Agent Skills workflow for writing, reviewing and debugging HLSL shaders |
+| **[Interactive Compute Shader Playground](playground/README.md)** | Offline browser tutorial: edit gravity, bounce, drag, timestep and thread-group size; see motion and lane utilization |
+| **[Run the playground](playground/index.html)** | Download this repo, then open the HTML file locally; no server required |
+| **[DXC-compilable compute shader](playground/particle-step.hlsl)** | See the actual HLSL source corresponding to the simulation math |
+| **[v1.0.0 release notes](RELEASE_NOTES.md)** | Installation, contents and validation boundaries |
+
+The browser playground **models compute-shader equations in JavaScript**. It does not run HLSL or measure GPU performance; use the real `.hlsl` source and a D3D12 host for native execution.
+
+### Install the Agent Skill
+
+Clone the repository and open it with Codex; the skill lives in `.agents/skills/hlsl-engineer/`. Alternatively copy that directory to `~/.agents/skills/hlsl-engineer/` for personal use. Invoke it as `$hlsl-engineer` when writing/debugging shaders.
+
+[Browse releases](https://github.com/Cryosimorgh/HLSL-Docs/releases) · [Skill installation and version notes](RELEASE_NOTES.md)
+
 ## Start here: the complete HLSL guide
 
 | Chapter | Topics |
