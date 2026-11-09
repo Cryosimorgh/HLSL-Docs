@@ -19,12 +19,9 @@ function Has-Tools {
 $ToolRoot = $Root
 if (-not (Has-Tools $ToolRoot)) {
     $version = 'v1.5.0'
-    $expectedHash = 'PENDING_RELEASE_SHA256'
+    $expectedHash = 'a8fb97a0b22d4b323f171c06787b36fed43342f8890482f3e03a478241d252e1'
     $file = 'HLSL-CompilerTools-v1.5.0.zip'
     $url = "https://github.com/Cryosimorgh/HLSL-Docs/releases/download/$version/$file"
-    if ($expectedHash -eq 'PENDING_RELEASE_SHA256') {
-        throw "Source checkout compiler bootstrap is being finalized. Use the full portable Windows ZIP at https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.5.0"
-    }
     $cache = if ($env:HLSL_BOOTSTRAP_CACHE) { $env:HLSL_BOOTSTRAP_CACHE } else {
         Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'HLSL-Docs\CompilerTools'
     }
