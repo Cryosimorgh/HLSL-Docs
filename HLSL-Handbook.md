@@ -6,14 +6,13 @@ Independent reference and tutorial. Last reviewed: 2026-11-09. The original chap
 
 ## Contents
 
-- [Chapter 1: fundamentals](#01--)
-- [Chapter 2: graphics textures](#02--)
-- [Chapter 3: compute memory](#03--)
-- [Chapter 4: resources host](#04--)
-- [Chapter 5: api catalog](#05--)
-- [Chapter 6: advanced](#06--)
-- [Chapter 7: sunder case study](#07--)
-
+- [01 — HLSL fundamentals: the language and GPU execution model](#01--hlsl-fundamentals-the-language-and-gpu-execution-model)
+- [02 — Graphics pipeline, texture sampling and pixel output](#02--graphics-pipeline-texture-sampling-and-pixel-output)
+- [03 — Compute shaders, thread indexing, GPU memory and synchronization](#03--compute-shaders-thread-indexing-gpu-memory-and-synchronization)
+- [04 — Resource objects, binding, D3D12 root signatures and host integration](#04--resource-objects-binding-d3d12-root-signatures-and-host-integration)
+- [05 — HLSL API catalog: intrinsics, resource methods, semantics and attributes](#05--hlsl-api-catalog-intrinsics-resource-methods-semantics-and-attributes)
+- [06 — Advanced HLSL, portability, precision, validation and performance](#06--advanced-hlsl-portability-precision-validation-and-performance)
+- [07 — Real-world HLSL case study: Sunder GPU physics](#07--real-world-hlsl-case-study-sunder-gpu-physics)
 ---
 
 # 01 — HLSL fundamentals: the language and GPU execution model
