@@ -44,7 +44,7 @@ function Get-PortableRuntime {
         return $runtimeRoot
     }
     Write-Host "Portable tools are missing from this checkout. Downloading verified $version runtime (15 MB)..." -ForegroundColor Yellow
-    $zipPath = Join-Path $cacheBase ($archiveName + '.' + [guid]::NewGuid().ToString('N') + '.download')
+    $zipPath = Join-Path $cacheBase ($folderName + '.' + [guid]::NewGuid().ToString('N') + '.zip')
     $staging = Join-Path $cacheBase ('extract-' + [guid]::NewGuid().ToString('N'))
     try {
         [Net.ServicePointManager]::SecurityProtocol = (
