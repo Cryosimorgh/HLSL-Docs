@@ -27,7 +27,7 @@ $zigArgs = @('build-exe','playground/zig-server.zig','-O','ReleaseSafe','-femit-
 & zig @zigArgs
 ~~~
 
-Ensure Microsoft DXC with SPIR-V support and prebuilt Naga are installed or present in PATH, then run **Start-HLSL-Playground.cmd**. The launcher starts hlsl-server.exe automatically. See [Zig backend release notes](../RELEASE_NOTES_v1.3.0.md).
+Ensure Microsoft DXC with SPIR-V support and prebuilt Naga are installed or present in PATH, then run **Start-HLSL-Playground.cmd**. The launcher starts hlsl-server.exe automatically. See [Zig backend release notes](../RELEASE_NOTES_v1.3.1.md).
 
 ## Run it
 
