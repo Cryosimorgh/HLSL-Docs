@@ -16,7 +16,7 @@ Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, an
 | **[Interactive HLSL editor + GPU runner](playground/README.md)** | Edit HLSL compute code and buffer bindings; compile with local DXC/Naga and run translated WGSL on WebGPU, with outputs and compiler errors |
 | **[Run the playground](playground/index.html)** | Download this repo, then open the HTML file locally; no server required |
 | **[DXC-compilable compute shader](playground/particle-step.hlsl)** | See the actual HLSL source corresponding to the simulation math |
-| **[v1.0.0 release notes](RELEASE_NOTES.md)** | Installation, contents and validation boundaries |
+| **[v1.1.0 editor release notes](RELEASE_NOTES_v1.1.0.md)** | Editable HLSL, local compiler bridge, WebGPU execution and validation boundaries |
 
 The offline canvas **models compute-shader equations in JavaScript**. For real compute execution, launch the local compiler bridge and use the browser's WebGPU mode; it runs WGSL translated from your HLSL, not native D3D12 DXIL. See the [setup guide](playground/README.md).
 
@@ -24,7 +24,7 @@ The offline canvas **models compute-shader equations in JavaScript**. For real c
 
 Clone the repository and open it with Codex; the skill lives in `.agents/skills/hlsl-engineer/`. Alternatively copy that directory to `~/.agents/skills/hlsl-engineer/` for personal use. Invoke it as `$hlsl-engineer` when writing/debugging shaders.
 
-[Browse releases](https://github.com/Cryosimorgh/HLSL-Docs/releases) · [Skill installation and version notes](RELEASE_NOTES.md)
+[Latest releases](https://github.com/Cryosimorgh/HLSL-Docs/releases) · [Editor setup and limits](RELEASE_NOTES_v1.1.0.md) · [Original v1.0.0 notes](RELEASE_NOTES.md)
 
 ## Start here: the complete HLSL guide
 
