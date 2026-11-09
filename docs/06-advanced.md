@@ -146,8 +146,14 @@ dxc -dumpbin release.dxil
 ## 9. Performance model and common traps
 
 ~~~hlsl
-// Prefer adjacent lanes to access adjacent elements:
-float value = Source[SV_DispatchThreadID.x]; // conceptual indexing
+StructuredBuffer<float> Source : register(t0);
+RWStructuredBuffer<float> Result : register(u0);
+[numthreads(128,1,1)]
+void CopyCoalesced(uint3 tid : SV_DispatchThreadID)
+{
+    if (tid.x >= count) return;  // count supplied by a cbuffer
+    Result[tid.x] = Source[tid.x];
+}
 ~~~
 
 - **What:** Coalesced memory access helps hide latency and improves useful bandwidth.
