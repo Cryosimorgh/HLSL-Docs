@@ -1,0 +1,35 @@
+name: Zig HLSL backend compile and HTTP tests
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'playground/zig-server.zig'
+      - '.github/workflows/zig-backend-test.yml'
+      - 'playground/test-zig.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  compile:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: mlugg/setup-zig@v2
+        with:
+          version: 0.13.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build Zig backend
+        shell: bash
+        run: |
+          zig version
+          zig build-exe playground/zig-server.zig -O ReleaseSafe -femit-bin=playground/hlsl-server
+      - name: Verify browser contract and automatic shutdown
+        shell: bash
+        run: node playground/test-zig.mjs
