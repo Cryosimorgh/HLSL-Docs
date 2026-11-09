@@ -4,6 +4,8 @@
 
 Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, annotated code, explanations of **what each API does and why it is used**, common failure modes and links to Microsoft's canonical specifications. Includes real HLSL patterns from the [Sunder GPU physics engine](https://github.com/Cryosimorgh/Sunder).
 
+**[Read or save the complete single-file Markdown edition →](HLSL-Handbook.md)** · [Browse the chapter index below](#start-here-the-complete-hlsl-guide)
+
 > Independent learning resource; **not official Microsoft documentation**. Focus: modern Direct3D 12 + DXC + SM6.x. Differences for D3D11/FXC and newer hardware features are explicitly marked. Last reviewed: **9 November 2026**.
 
 ## Start here: the complete HLSL guide
