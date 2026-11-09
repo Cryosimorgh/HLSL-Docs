@@ -8,6 +8,14 @@ Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, an
 
 > Independent learning resource; **not official Microsoft documentation**. Focus: modern Direct3D 12 + DXC + SM6.x. Differences for D3D11/FXC and newer hardware features are explicitly marked. Last reviewed: **9 November 2026**.
 
+## Windows security advisory — native runner temporarily on hold
+
+A user reported that Windows Defender blocked the bundled `hlsl-server.exe` as potentially malicious/unwanted software, followed by an `illegal action` error when attempting to run it. **The executable has not been established to be safe. Do not bypass Defender or allowlist it.** Source-checkout auto-download of the previously flagged executable is paused pending security analysis.
+
+A separate compatibility issue was found: Zig 0.13 binaries were compiled using the GitHub runner's CPU defaults. Zig's own documentation states this can generate instructions unavailable on older computers. Build/test configuration now requests `-mcpu baseline`, but this has not resolved the Defender classification and no new Windows binary should be treated as vetted on that basis.
+
+For now, use [the offline JavaScript interactive particle tutorial](playground/index.html) without native GPU shader execution. See [security/compatibility issue #1](https://github.com/Cryosimorgh/HLSL-Docs/issues/1). To help investigate, provide the Defender **Protection history** threat name and, if the program crashed, Windows **Application Error** event 1000 exception code.
+
 ## One-click interactive HLSL playground (Windows)
 
 **Extract the [Windows portable ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases) or clone this repository, then double-click `Start-HLSL-Playground.cmd`.** A source checkout automatically downloads a checksum-verified 15 MB Zig/DXC/Naga runtime to your per-user cache the first time. The launcher opens your browser and runs the bundled Zig backend, DXC and prebuilt Naga automatically—no Rust, Cargo, Node or Zig installation, terminal commands or global configuration needed.
