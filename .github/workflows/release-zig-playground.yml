@@ -10,7 +10,8 @@ permissions:
 
 jobs:
   package:
-    if: github.repository == 'Cryosimorgh/HLSL-Docs'
+    # Requires an explicit reviewed-security decision; untrusted releases remain blocked.
+    if: github.repository == 'Cryosimorgh/HLSL-Docs' && vars.WINDOWS_NATIVE_RELEASE_CLEARED == 'true'
     runs-on: windows-latest
     timeout-minutes: 50
     steps:
