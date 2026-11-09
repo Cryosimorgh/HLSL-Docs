@@ -14,7 +14,7 @@ A user reported that Windows Defender blocked the bundled `hlsl-server.exe` as p
 
 A separate compatibility issue was found: Zig 0.13 binaries were compiled using the GitHub runner's CPU defaults. Zig's own documentation states this can generate instructions unavailable on older computers. Build/test configuration now requests `-mcpu baseline`, but this has not resolved the Defender classification and no new Windows binary should be treated as vetted on that basis.
 
-For now, use [the offline JavaScript interactive particle tutorial](playground/index.html) without native GPU shader execution. See [security/compatibility issue #1](https://github.com/Cryosimorgh/HLSL-Docs/issues/1). To help investigate, provide the Defender **Protection history** threat name and, if the program crashed, Windows **Application Error** event 1000 exception code.
+For now, open [the browser-only tutorial](playground/index.html) from a fresh source checkout. It provides the **offline JavaScript particle simulation** and a **real, editable WGSL WebGPU compute lab** that needs no server or native binaries. The WGSL lab does not compile HLSL; native HLSL execution remains disabled. See [security/compatibility issue #1](https://github.com/Cryosimorgh/HLSL-Docs/issues/1). To help investigate, provide the Defender **Protection history** threat name and, if the program crashed, Windows **Application Error** event 1000 exception code.
 
 ## One-click interactive HLSL playground (Windows)
 
