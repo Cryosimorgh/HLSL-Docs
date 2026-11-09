@@ -108,6 +108,30 @@ jobs:
           foreach ($folder in @($portable, $source)) {
             if (-not (Test-Path (Join-Path $folder 'Start-HLSL-Playground.cmd'))) { throw 'Missing launcher' }
           }
+          # Smoke-test the actual bundled PowerShell launcher with no browser UI.
+          & (Join-Path $portable 'Start-HLSL-Playground.ps1') -NoBrowser
+          if ($LASTEXITCODE -ne 0) { throw 'Windows one-click launcher failed' }
+          $runtimeDir = Join-Path $portable '.playground-runtime'
+          $ready = Get-ChildItem -LiteralPath $runtimeDir -File -Filter ready.json -Recurse |
+            Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if (-not $ready) { throw 'Launcher did not create readiness marker' }
+          $service = Get-Content -LiteralPath $ready.FullName -Raw | ConvertFrom-Json
+          $session = Invoke-RestMethod -Uri "$($service.url)/api/session/open" -Method Post -ContentType 'application/json' -Body '{}'
+          $payload = @{ token = $session.token } | ConvertTo-Json -Compress
+          Invoke-RestMethod -Uri "$($service.url)/api/session/close" -Method Post -ContentType 'application/json' -Body $payload | Out-Null
+          $stopped = $false
+          for ($i = 0; $i -lt 40; $i++) {
+            Start-Sleep -Milliseconds 250
+            if (-not (Get-Process -Id $service.pid -ErrorAction SilentlyContinue)) {
+              $stopped = $true
+              break
+            }
+          }
+          if (-not $stopped) {
+            Stop-Process -Id $service.pid -Force -ErrorAction SilentlyContinue
+            throw 'Bundled Node service remained alive after final tab closed'
+          }
+          Remove-Item -LiteralPath $runtimeDir -Recurse -Force
           $portableZip = Join-Path $out 'HLSL-Playground-Windows-v1.2.0.zip'
           $sourceZip = Join-Path $out 'HLSL-Playground-Source-v1.2.0.zip'
           Compress-Archive -LiteralPath $portable -DestinationPath $portableZip -CompressionLevel Optimal
