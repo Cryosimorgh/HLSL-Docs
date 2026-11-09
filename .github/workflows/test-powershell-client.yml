@@ -27,3 +27,35 @@ jobs:
         run: |
           node playground/test-powershell.mjs
           if ($LASTEXITCODE -ne 0) { throw "PowerShell host smoke test failed" }
+      - name: Acquire upstream DXC (Windows)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = Join-Path $env:RUNNER_TEMP 'dxc-release.zip'
+          $dir = Join-Path $env:RUNNER_TEMP 'dxc-release'
+          Invoke-WebRequest -Uri 'https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.9.2609/dxc_2026_09_29.zip' -OutFile $zip -MaximumRetryCount 4 -RetryIntervalSec 10
+          Expand-Archive -LiteralPath $zip -DestinationPath $dir -Force
+          if (-not (Test-Path (Join-Path $dir 'bin\x64\dxc.exe'))) { throw 'DXC binary missing' }
+      - name: Extract precompiled Naga without extracting the old custom server
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = Join-Path $env:RUNNER_TEMP 'older-naga-bundle.zip'
+          $dst = Join-Path $env:RUNNER_TEMP 'prebuilt-naga.exe'
+          Invoke-WebRequest -Uri 'https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.2.0/HLSL-Playground-Windows-v1.2.0.zip' -OutFile $zip -MaximumRetryCount 4 -RetryIntervalSec 10
+          Add-Type -AssemblyName System.IO.Compression.FileSystem
+          $archive = [System.IO.Compression.ZipFile]::OpenRead($zip)
+          try {
+            $entry = $archive.Entries | Where-Object { $_.FullName -eq 'HLSL-Playground-Windows-v1.2.0/tools/naga/naga.exe' } | Select-Object -First 1
+            if (-not $entry) { throw 'Prebuilt Naga missing from source archive' }
+            [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, $dst, $true)
+          } finally { $archive.Dispose() }
+          & $dst --help | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'Naga cannot run' }
+      - name: Compile real HLSL to WGSL via the PowerShell API
+        shell: pwsh
+        run: |
+          $env:HLSL_TEST_DXC = Join-Path $env:RUNNER_TEMP 'dxc-release\bin\x64\dxc.exe'
+          $env:HLSL_TEST_NAGA = Join-Path $env:RUNNER_TEMP 'prebuilt-naga.exe'
+          node playground/test-powershell.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Real compiler HTTP integration failed' }
