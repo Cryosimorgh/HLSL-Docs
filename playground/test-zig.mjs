@@ -38,6 +38,12 @@ try{
  const health=await(await fetch(base+"/api/health")).json();
  assert.equal(health.backend,"zig");
  assert.equal(health.activeTabs,0);
+ // Exercise simultaneous local clients without detached Zig request threads.
+ // Must not crash or confuse per-connection request headers.
+ const burst = await Promise.all(Array.from({length:40},()=>fetch(base+"/api/health")));
+ assert.ok(burst.every(x=>x.status===200),"Concurrent health burst should succeed.");
+ const states = await Promise.all(burst.map(x=>x.json()));
+ assert.ok(states.every(x=>x.backend==="zig"),"All responses must belong to Zig backend.");
  const page=await fetch(base+"/");
  assert.equal(page.status,200);
  assert.match(await page.text(),/HLSL Compute Playground/);
@@ -67,7 +73,9 @@ try{
  assert.equal(badJson.status,400);
  assert.equal((await post("/api/session/close",{token:tokenB})).status,200);
  await untilExit();
- console.log("PASS Zig static files, request validation, same-origin checks, multitab leases, and auto-exit");
+ assert.equal(child.exitCode,0,
+   "Zig server must exit normally (zero), not crash with STATUS_ACCESS_VIOLATION/0xC0000005: "+stderr);
+ console.log("PASS Zig server: 40 concurrent clients, validation, multitab leases and graceful zero-code exit");
 }finally{
  if(child.exitCode===null&&child.signalCode===null)child.kill();
 }
