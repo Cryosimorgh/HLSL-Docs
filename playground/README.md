@@ -6,28 +6,26 @@ The offline mode is a small, dependency-free tutorial for learning what **HLSL c
 
 ## One-click Windows launcher (recommended)
 
-For the portable Windows ZIP, **no terminal commands, Rust, Cargo, Node or Zig installation are required**:
+**Both the portable release and ordinary source checkouts now launch without manually installing DXC, Naga, Rust, Cargo, Node.js or Zig.**
 
-1. Download the [latest Windows portable release](https://github.com/Cryosimorgh/HLSL-Docs/releases).
-2. Extract the ZIP completely and double-click **Start-HLSL-Playground.cmd**.
+1. Download and extract the [latest Windows portable release](https://github.com/Cryosimorgh/HLSL-Docs/releases), **or clone this repository**.
+2. Double-click **Start-HLSL-Playground.cmd** at the extracted/checkout root. In a checkout missing native binaries, the launcher automatically downloads a pinned, SHA-256-verified portable runtime into your per-user app-data cache (approximately 15 MB, first run only).
 3. The launcher automatically starts its bundled Zig/DXC/prebuilt-Naga local service on an available loopback port and opens the tutorial in your default browser.
 4. Press **Close playground & stop server**, or close the tab. The server and compiler child processes stop automatically when the last connected tab closes. A browser crash is handled by a heartbeat timeout (normally about 45 seconds).
 5. No global installation, persistent background service, scheduled task, or system PATH changes are made.
 
 A tab opened by Windows cannot always be physically closed by a webpage; the Close button ends the session and navigates it to a blank page. It does **not** close other browser tabs or the entire browser.
 
-### Source builds (developers only)
+### Building the Zig backend yourself (optional)
 
-Zig 0.13.0 is needed **only if you want to compile the backend yourself**. End users should use the Windows ZIP; it already contains the executable and a prebuilt Naga translator.
-
-From the repository root on Windows PowerShell:
+You do **not** need Zig for normal use, even from a checkout. To modify and rebuild the Zig server, install Zig 0.13.0 and run:
 
 ~~~powershell
 $zigArgs = @('build-exe','playground/zig-server.zig','-O','ReleaseSafe','-femit-bin=playground/hlsl-server.exe')
 & zig @zigArgs
 ~~~
 
-Ensure Microsoft DXC with SPIR-V support and prebuilt Naga are installed or present in PATH, then run **Start-HLSL-Playground.cmd**. The launcher starts hlsl-server.exe automatically. See [Zig backend release notes](../RELEASE_NOTES_v1.3.1.md).
+The launcher uses local compiled binaries if the full runtime is present; otherwise it uses the verified portable runtime. Open the new **http://127.0.0.1:PORT** browser tab created by the launcher. Do not use an old `file://` tab: that is offline and may display obsolete Node setup instructions.
 
 ## Run it
 
@@ -59,7 +57,7 @@ The lower-left code box is now an editable HLSL editor. It supports two modes:
 
 **Recommended:** Use the Windows portable ZIP with the compiled Zig backend, DXC and prebuilt Naga. There is no dependency installation and no local Cargo/Rust build.
 
-**Manual/developer mode:** Build playground/zig-server.zig using Zig 0.13, set DXC_PATH/NAGA_PATH if the binaries are not on PATH, run the resulting hlsl-server executable, then visit http://127.0.0.1:4173/ in a WebGPU browser. Supported shaders use HLSL compute entry points, buffer descriptors, and DXC SPIR-V → Naga WGSL conversion.
+**Manual development:** Zig 0.13 can build `playground/zig-server.zig`. For routine use, the launcher obtains the tools automatically and opens a random loopback port. Supported shaders still use compute entry points, buffer descriptors and DXC SPIR-V → Naga WGSL conversion.
 
 ### Run a different HLSL program
 
