@@ -9,7 +9,7 @@ const maxBytes = 4*1024*1024, maxTotal = 8*1024*1024, maxGroups = 1024;
 const isBridgeOrigin = /^http:\/\/127\.0\.0\.1:\d+$/.test(location.origin);
 
 // The browser is intentionally unable to launch or kill OS processes.
-// It owns a lease in the loopback-only Zig server started by the launcher.
+// It owns a lease in the loopback-only PowerShell/.NET host started by the launcher.
 // Closing the tab sends a best-effort release; heartbeat expiration handles
 // forced browser exits / lost pagehide events.
 let leaseToken = null, leaseClosed = false, heartbeatTimer = null;
@@ -175,12 +175,7 @@ function compiledSize(wgsl) {
   return [Number(m[1]),Number(m[2]||1),Number(m[3]||1)];
 }
 async function run(){
-  // SECURITY HOLD: Defender classified a previously published native backend
-  // as a severe Trojan and it crashed with 0xc0000005. Until the binary has
-  // been independently reviewed, refuse native compiler requests even if
-  // a user programmatically re-enables the disabled HLSL button.
-  throw Error("Native HLSL execution is paused pending security review. Use the safe browser-only WGSL lab above; see GitHub issue #1.");
-  if(!isBridgeOrigin)throw Error("This tab is offline or outdated. Double-click Start-HLSL-Playground.cmd from the current checkout or Windows portable release, then use the NEW localhost tab it opens. It will fetch Zig/DXC/Naga automatically if needed.");
+  if(!isBridgeOrigin)throw Error("This tab is offline. Run Start-HLSL-Playground.cmd from the new Windows portable package or an updated checkout and use the new localhost tab.");
   if(!navigator.gpu)throw Error("No WebGPU support. Use a compatible Chromium/Edge browser and GPU.");
   const spec=parseManifest(),source=editor.value;
   if(!source||source.length>65536)throw Error("HLSL source must be 1-65536 characters.");
@@ -295,7 +290,7 @@ $("example-scale").addEventListener("click",()=>{
 });
 $("show-wgsl").addEventListener("change",e=>wgslArea.hidden=!e.target.checked);
 setStatus(isBridgeOrigin?
-  "Ready: run editable HLSL via local compiler + browser WebGPU.":
-  "Offline code editor ready. Real GPU runs require the local compiler server (see README).");
+  "Ready: edit HLSL, compile with DXC + Naga through the local PowerShell host, execute using WebGPU.":
+  "Offline code editor ready. Use Start-HLSL-Playground.cmd to enable DXC/Naga HLSL compilation.");
 void openLease();
 })();
