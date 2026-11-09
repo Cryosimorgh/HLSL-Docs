@@ -22,6 +22,8 @@ jobs:
           node-version: '22'
       - name: Test HTML/JavaScript, routes and compiler wiring
         run: node playground/test.mjs
+      - name: Check browser tab lifetime and automatic server termination
+        run: node playground/test-lifecycle.mjs
       - name: Fetch known DXC release with SPIR-V backend
         id: dxc-download
         continue-on-error: true
