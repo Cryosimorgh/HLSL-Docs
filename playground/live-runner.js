@@ -175,6 +175,11 @@ function compiledSize(wgsl) {
   return [Number(m[1]),Number(m[2]||1),Number(m[3]||1)];
 }
 async function run(){
+  // SECURITY HOLD: Defender classified a previously published native backend
+  // as a severe Trojan and it crashed with 0xc0000005. Until the binary has
+  // been independently reviewed, refuse native compiler requests even if
+  // a user programmatically re-enables the disabled HLSL button.
+  throw Error("Native HLSL execution is paused pending security review. Use the safe browser-only WGSL lab above; see GitHub issue #1.");
   if(!isBridgeOrigin)throw Error("This tab is offline or outdated. Double-click Start-HLSL-Playground.cmd from the current checkout or Windows portable release, then use the NEW localhost tab it opens. It will fetch Zig/DXC/Naga automatically if needed.");
   if(!navigator.gpu)throw Error("No WebGPU support. Use a compatible Chromium/Edge browser and GPU.");
   const spec=parseManifest(),source=editor.value;
