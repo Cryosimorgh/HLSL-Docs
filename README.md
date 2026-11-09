@@ -8,6 +8,14 @@ Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, an
 
 > Independent learning resource; **not official Microsoft documentation**. Focus: modern Direct3D 12 + DXC + SM6.x. Differences for D3D11/FXC and newer hardware features are explicitly marked. Last reviewed: **9 November 2026**.
 
+## One-click interactive HLSL playground (Windows)
+
+**Download the Windows portable ZIP from [the latest release](https://github.com/Cryosimorgh/HLSL-Docs/releases).** Extract everything and double-click **Start-HLSL-Playground.cmd**. The launcher opens your browser and runs the bundled Node, DXC and Naga compiler service automatically—no Rust, Node installation, terminal commands or global configuration needed.
+
+Press **Close playground & stop server** or close the final tutorial tab to stop the local compiler service. The server also closes after a missed-heartbeat timeout if the browser crashes, without closing unrelated browser tabs.
+
+The browser executes **WGSL translated from HLSL** using WebGPU for compatible compute kernels. It does not execute arbitrary native Direct3D shaders. [Setup, supported features and limitations](playground/README.md) · [v1.2.0 notes](RELEASE_NOTES_v1.2.0.md).
+
 ## Learn interactively and use the Agent Skill
 
 | Resource | Use it for |
