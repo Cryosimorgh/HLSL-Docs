@@ -18,28 +18,17 @@ The Zig backend source no longer terminates its process from detached request th
 
 The offline mode is a small, dependency-free tutorial for learning what **HLSL compute shaders** do. It makes parameters and dispatch sizes visible before you build a full Direct3D 12 host application.
 
-## One-click Windows launcher (recommended)
+## Browser-only usage (recommended while native binaries are on hold)
 
-**Both the portable release and ordinary source checkouts now launch without manually installing DXC, Naga, Rust, Cargo, Node.js or Zig.**
+1. Download the [current source ZIP](https://github.com/Cryosimorgh/HLSL-Docs/archive/refs/heads/main.zip), extract it and open `playground/index.html`.
+2. Use the **WGSL** editor and **Run WGSL on GPU** with a WebGPU-capable browser. The editor's output comes from a real WebGPU compute dispatch, without a downloaded native server.
+3. Change the multiplier in the WGSL source and compare results. The HTML also contains the offline JavaScript physics simulation and the HLSL code viewer.
 
-1. Download and extract the [latest Windows portable release](https://github.com/Cryosimorgh/HLSL-Docs/releases), **or clone this repository**.
-2. Double-click **Start-HLSL-Playground.cmd** at the extracted/checkout root. In a checkout missing native binaries, the launcher automatically downloads a pinned, SHA-256-verified portable runtime into your per-user app-data cache (approximately 15 MB, first run only).
-3. The launcher automatically starts its bundled Zig/DXC/prebuilt-Naga local service on an available loopback port and opens the tutorial in your default browser.
-4. Press **Close playground & stop server**, or close the tab. The server and compiler child processes stop automatically when the last connected tab closes. A browser crash is handled by a heartbeat timeout (normally about 45 seconds).
-5. No global installation, persistent background service, scheduled task, or system PATH changes are made.
+**Safety:** The old Windows portable binaries remain under investigation. Do not start `hlsl-server.exe` or use previous ZIPs; the current Windows launcher intentionally blocks execution. The source-tree Zig HTTP server has been refactored and stress-tested, but has **not** been cleared for distribution by Microsoft's security review.
 
-A tab opened by Windows cannot always be physically closed by a webpage; the Close button ends the session and navigates it to a blank page. It does **not** close other browser tabs or the entire browser.
+### Developer-only Zig backend source
 
-### Building the Zig backend yourself (optional)
-
-You do **not** need Zig for normal use, even from a checkout. To modify and rebuild the Zig server, install Zig 0.13.0 and run:
-
-~~~powershell
-$zigArgs = @('build-exe','playground/zig-server.zig','-O','ReleaseSafe','-femit-bin=playground/hlsl-server.exe')
-& zig @zigArgs
-~~~
-
-The launcher uses local compiled binaries if the full runtime is present; otherwise it uses the verified portable runtime. Open the new **http://127.0.0.1:PORT** browser tab created by the launcher. Do not use an old `file://` tab: that is offline and may display obsolete Node setup instructions.
+The Zig 0.13 source remains available at `playground/zig-server.zig` for auditing. The automated Windows and Linux tests use an explicit `-mcpu baseline` target and assert a clean zero-code process exit; those tests are **not** a malware classification or a guarantee for every device. If the Microsoft security and independent reproduction gates eventually pass, the project can build a reviewed, signed distribution.
 
 ## Run it
 
