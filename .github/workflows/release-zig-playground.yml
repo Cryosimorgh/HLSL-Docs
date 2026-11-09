@@ -25,7 +25,8 @@ jobs:
       - name: Compile the Zig compiler backend
         shell: pwsh
         run: |
-          zig build-exe playground/zig-server.zig -O ReleaseSafe -femit-bin=playground/hlsl-server.exe
+          $zigArgs = @('build-exe','playground/zig-server.zig','-O','ReleaseSafe','-femit-bin=playground/hlsl-server.exe')
+          & zig @zigArgs
           if ($LASTEXITCODE -ne 0) { throw 'Zig backend build failed' }
       - name: Smoke test compiled Zig API, sessions and automatic shutdown
         shell: pwsh
