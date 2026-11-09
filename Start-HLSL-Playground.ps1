@@ -1,28 +1,94 @@
 # One-click Windows launcher for the HLSL Compute Playground.
 # The portable release bundles hlsl-server.exe (Zig), dxc.exe and naga.exe; no installation
-# or global PATH changes are needed. Server binds to 127.0.0.1 only.
+# or global PATH changes are needed. Server binds to 127.0.0.1 only; source checkouts self-bootstrap verified tools.
 # The browser tab owns a heartbeat lease and the server exits after it closes.
 [CmdletBinding()]
 param([switch]$NoBrowser)
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ServerScript = Join-Path $Root "playground\hlsl-server.exe"
-if (-not (Test-Path -LiteralPath $ServerScript -PathType Leaf)) {
-    throw "Missing Zig backend hlsl-server.exe. Extract the FULL Zig release ZIP, then run the launcher."
-}
-function Find-Executable {
-    param([string]$Bundled, [string]$Executable)
-    if (Test-Path -LiteralPath $Bundled -PathType Leaf) {
-        return (Resolve-Path -LiteralPath $Bundled).Path
+
+function Test-CompleteRuntime {
+    param([string]$Folder)
+    foreach ($relative in @(
+        'playground\hlsl-server.exe', 'playground\index.html',
+        'playground\live-runner.js', 'playground\particle-step.hlsl',
+        'tools\dxc\dxc.exe', 'tools\dxc\dxcompiler.dll',
+        'tools\naga\naga.exe'
+    )) {
+        if (-not (Test-Path -LiteralPath (Join-Path $Folder $relative) -PathType Leaf)) {
+            return $false
+        }
     }
-    $found = Get-Command $Executable -ErrorAction SilentlyContinue |
-        Where-Object { $_.CommandType -eq "Application" } |
-        Select-Object -First 1
-    if ($found) { return $found.Source }
-    throw "Missing $Executable. Use the HLSL-Playground-Windows portable release with tools included."
+    return $true
 }
-$Dxc = Find-Executable (Join-Path $Root "tools\dxc\dxc.exe") "dxc.exe"
-$Naga = Find-Executable (Join-Path $Root "tools\naga\naga.exe") "naga.exe"
+
+function Get-PortableRuntime {
+    # Pinned archive, with SHA256 taken from the published GitHub release.
+    # This is a one-time user-local download, never a system-wide installation.
+    $version = 'v1.3.1'
+    $expectedSha256 = '862189c5524d7d98c92b97d789f103b92b4edb10466a07deade6667c1035090b'
+    $folderName = "HLSL-Playground-Windows-$version"
+    $archiveName = "$folderName.zip"
+    $url = "https://github.com/Cryosimorgh/HLSL-Docs/releases/download/$version/$archiveName"
+    $cacheBase = if ($env:HLSL_BOOTSTRAP_CACHE) {
+        $env:HLSL_BOOTSTRAP_CACHE
+    } else {
+        $localData = [Environment]::GetFolderPath('LocalApplicationData')
+        if (-not $localData) { $localData = $env:TEMP }
+        Join-Path $localData 'HLSL-Playground\PortableCache'
+    }
+    New-Item -ItemType Directory -Path $cacheBase -Force | Out-Null
+    $runtimeRoot = Join-Path $cacheBase $folderName
+    if (Test-CompleteRuntime $runtimeRoot) {
+        Write-Host "Using cached Zig runtime: $runtimeRoot"
+        return $runtimeRoot
+    }
+    Write-Host "Portable tools are missing from this checkout. Downloading verified $version runtime (15 MB)..." -ForegroundColor Yellow
+    $zipPath = Join-Path $cacheBase ($archiveName + '.' + [guid]::NewGuid().ToString('N') + '.download')
+    $staging = Join-Path $cacheBase ('extract-' + [guid]::NewGuid().ToString('N'))
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = (
+            [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+        )
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+                Invoke-WebRequest -Uri $url -OutFile $zipPath -UseBasicParsing -ErrorAction Stop
+                break
+            } catch {
+                if ($attempt -eq 3) { throw "Download failed: $($_.Exception.Message). Manual ZIP: $url" }
+                Start-Sleep -Seconds (2 * $attempt)
+            }
+        }
+        $sha256 = (Get-FileHash -LiteralPath $zipPath -Algorithm SHA256).Hash
+        if ($sha256 -ine $expectedSha256) {
+            throw "Archive checksum mismatch. Expected $expectedSha256, got $sha256. Refusing to execute."
+        }
+        New-Item -ItemType Directory -Path $staging -Force | Out-Null
+        Expand-Archive -LiteralPath $zipPath -DestinationPath $staging -Force
+        $extracted = Join-Path $staging $folderName
+        if (-not (Test-CompleteRuntime $extracted)) {
+            throw "The verified archive does not contain the expected portable compiler binaries."
+        }
+        if (Test-Path -LiteralPath $runtimeRoot) {
+            Remove-Item -LiteralPath $runtimeRoot -Recurse -Force
+        }
+        Move-Item -LiteralPath $extracted -Destination $runtimeRoot
+        Write-Host "Runtime cached: $runtimeRoot" -ForegroundColor Green
+        return $runtimeRoot
+    } finally {
+        Remove-Item -LiteralPath $zipPath -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
+    }
+}
+
+# Full release ZIP: use bundled tools. Source checkout: fetch the portable
+# runtime once, including the compiled Zig server and matching DXC/Naga.
+if (-not (Test-CompleteRuntime $Root)) {
+    $Root = Get-PortableRuntime
+}
+$ServerScript = Join-Path $Root 'playground\hlsl-server.exe'
+$Dxc = Join-Path $Root 'tools\dxc\dxc.exe'
+$Naga = Join-Path $Root 'tools\naga\naga.exe'
 $logs = Join-Path $Root ".playground-runtime"
 New-Item -ItemType Directory -Path $logs -Force | Out-Null
 # Random run directory avoids overwriting previous diagnostics.
@@ -32,7 +98,7 @@ $ready = Join-Path $run "ready.json"
 $outLog = Join-Path $run "server.stdout.log"
 $errLog = Join-Path $run "server.stderr.log"
 # Avoid an already occupied port. The OS holds this port only briefly while
-# selecting it; Node is authoritative if another process wins the race.
+# selecting it; Zig is authoritative if another process wins the race.
 $listener = [Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback, 0)
 try {
     $listener.Start()
@@ -46,15 +112,15 @@ $env:DXC_PATH = $Dxc
 $env:NAGA_PATH = $Naga
 $Server = $null
 try {
-    $argsForNode = @{
+    $argsForZig = @{
         FilePath = $ServerScript
         WorkingDirectory = $Root
-                WindowStyle = "Hidden"
+        WindowStyle = "Hidden"
         PassThru = $true
         RedirectStandardOutput = $outLog
         RedirectStandardError = $errLog
     }
-    $Server = Start-Process @argsForNode
+    $Server = Start-Process @argsForZig
     $opened = $false
     for ($i = 0; $i -lt 100; $i++) {
         Start-Sleep -Milliseconds 200
@@ -77,7 +143,8 @@ try {
         } else { "" }
         throw "Compiler service failed to start. $errors"
     }
-    Write-Host "Starting HLSL Playground: $($info.url)" -ForegroundColor Cyan
+    Write-Host "HLSL Playground ready: $($info.url)" -ForegroundColor Cyan
+    Write-Host "Open the newly launched localhost tab, not an old file:// page."
     Write-Host "Compiler closes when the last tab closes or you press Close Playground."
     if (-not $NoBrowser) {
         Start-Process -FilePath $info.url
