@@ -17,7 +17,9 @@ a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem)
 <div class="eyebrow">Learn HLSL by experimenting <span class="pill">Offline · No build required</span></div>
 <h1>Compute Shader Playground</h1>
 <p class="muted">Change GPU-style parameters and watch 2D particles move. See how <code>numthreads</code>, <code>SV_DispatchThreadID</code>, bounds guards and constant buffers map to a real HLSL kernel.</p>
-<p class="hint"><strong>Execution boundary:</strong> This page runs a <strong>JavaScript simulation</strong> of equivalent compute-shader math, not actual HLSL or WebGPU. The linked <a href="particle-step.hlsl">particle-step.hlsl</a> is separately compilable with DXC and requires a D3D12 host to execute.</p>
+<p class="hint"><strong>Execution boundary:</strong> The animated particle demo uses JavaScript. The editable compute editor below can separately compile HLSL and execute translated WGSL using browser WebGPU when started through the local launcher. <a href="README.md">How it works</a>.</p>
+<div class="buttons"><button id="close-playground" type="button" aria-label="Close the playground and stop its local compiler session">Close playground &amp; stop server</button></div>
+<p class="hint">Closing this page releases its session. The local compiler exits after the last tab closes; an unresponsive tab is detected by heartbeat timeout. Your other browser tabs stay open.</p>
 </header>
 <div class="layout">
 <aside class="panel controls" aria-label="Simulation controls">
