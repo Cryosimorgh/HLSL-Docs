@@ -65,7 +65,7 @@ try {
 } finally { $listener.Stop() }
 $PowerShellExe = Join-Path $PSHOME 'powershell.exe'
 if (-not (Test-Path -LiteralPath $PowerShellExe)) { $PowerShellExe = 'powershell.exe' }
-$launchArgs = '-NoProfile -NonInteractive -File "' + $ServerScript +
+$launchArgs = '-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "' + $ServerScript +
     '" -Port ' + $Port +
     ' -DxcPath "' + $Dxc +
     '" -NagaPath "' + $Naga +
