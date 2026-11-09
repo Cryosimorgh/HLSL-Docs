@@ -5,6 +5,9 @@ on:
     paths:
       - 'playground/index.html'
       - 'playground/live-runner.js'
+      - 'playground/gpu-visualizer.js'
+      - 'playground/test-gpu-visualizer.mjs'
+      - 'playground/circle-mask.hlsl'
       - 'playground/test-frontend.mjs'
       - '.github/workflows/hlsl-live-runner.yml'
   workflow_dispatch:
@@ -20,4 +23,6 @@ jobs:
         with:
           node-version: '22'
       - name: Check browser JavaScript and editable controls
-        run: node playground/test-frontend.mjs
+        run: |
+          node playground/test-frontend.mjs
+          node playground/test-gpu-visualizer.mjs
