@@ -1,8 +1,10 @@
 HLSL Playground — Windows portable launcher
 
-1. Extract the ENTIRE ZIP to a normal writable folder.
+1. Extract the ENTIRE Windows portable ZIP, OR clone the repository.
+   A source checkout auto-downloads the checked, SHA256-pinned portable
+   toolchain to your per-user app data cache on first launch.
 2. Double-click Start-HLSL-Playground.cmd.
-3. The launcher starts Node and opens the tutorial in your default browser.
+3. The launcher starts a Zig server and opens the tutorial in your default browser.
    Zig hlsl-server.exe, DXC and prebuilt Naga are INCLUDED in this portable package.
    No Rust/Cargo/Node/Zig installation or global PATH changes are needed.
 4. Edit HLSL and use Run on GPU for supported WebGPU compute shaders.
@@ -13,7 +15,7 @@ HLSL Playground — Windows portable launcher
    down after 90 seconds. Other browser tabs are never force-closed.
 
 The browser itself cannot start or kill processes. The launcher owns a
-loopback-only local Node service. When you press Close, the page may go blank
+loopback-only local Zig service. When you press Close, the page may go blank
 instead of physically closing the tab, depending on browser security rules.
 
 If the launch fails:
