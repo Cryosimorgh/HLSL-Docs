@@ -1,33 +1,43 @@
-HLSL Playground — Windows portable launcher
+HLSL Playground v1.5.0 — one-click Windows client
 
-1. Extract the ENTIRE Windows portable ZIP, OR clone the repository.
-   A source checkout auto-downloads the checked, SHA256-pinned portable
-   toolchain to your per-user app data cache on first launch.
-2. Double-click Start-HLSL-Playground.cmd.
-3. The launcher starts a Zig server and opens the tutorial in your default browser.
-   Zig hlsl-server.exe, DXC and prebuilt Naga are INCLUDED in this portable package.
-   No Rust/Cargo/Node/Zig installation or global PATH changes are needed.
-4. Edit HLSL and use Run on GPU for supported WebGPU compute shaders.
-5. Click "Close playground & stop server" or close the browser tab.
-   The Zig compiler service exits automatically when the LAST active tab
-   closes. If the browser crashes, the service exits after a heartbeat
-   timeout (usually within about 45 seconds). An unopened session shuts
-   down after 90 seconds. Other browser tabs are never force-closed.
+HOW TO RUN
+1. Download HLSL-Playground-Windows-v1.5.0.zip from
+   https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.5.0
+2. Extract the entire ZIP to a new folder.
+3. Double-click Start-HLSL-Playground.cmd.
+4. The launcher starts a localhost server using the Windows PowerShell/.NET
+   runtime already included in Windows. A browser tab opens automatically.
+5. Click "Array example", edit its HLSL code, then "Compile & Run HLSL".
+   The host uses DXC + Naga to generate WGSL, and WebGPU runs it on your GPU.
+6. Close the tab or press Close playground to stop the local server.
 
-The browser itself cannot start or kill processes. The launcher owns a
-loopback-only local Zig service. When you press Close, the page may go blank
-instead of physically closing the tab, depending on browser security rules.
+NO INSTALLATION NEEDED
+- No Rust/Cargo installation.
+- No Node.js installation.
+- No Zig installation or custom hlsl-server.exe.
+- DXC and a prebuilt Naga converter are inside tools/ in this ZIP.
+- No admin privileges or global PATH changes are needed.
 
-If the launch fails:
-- See .playground-runtime/<run>/server.stderr.log and server.stdout.log.
-- Confirm WebGPU is enabled in Chrome/Edge and the GPU is compatible.
-- Run the launcher from an extracted folder, not inside the ZIP.
-- An antivirus/Windows SmartScreen prompt may appear because the launcher
-  and bundled open-source binaries are not code-signed.
+EXPLAINING THE ARCHITECTURE
+Browser HLSL editor -> loopback PowerShell/.NET bridge -> DXC HLSL-to-SPIR-V
+-> precompiled Naga SPIR-V-to-WGSL -> browser WebGPU compute dispatch.
+The browser also has a separate WGSL-only GPU lab and a JavaScript particle
+simulation, which work without a local compilation server.
 
-This WebGPU path converts HLSL -> SPIR-V -> WGSL. It does not run native D3D12
-DXIL, and is limited to supported compute shaders / declared buffers.
-Read playground/README.md for supported APIs, custom buffer JSON and limits.
+LIMITS
+This is a supported-compute-subset playground, not any arbitrary HLSL GPU
+program. Custom buffer layouts require matching resource JSON. Browser
+WebGPU support depends on graphics drivers and settings.
 
-Bundled third-party licenses/notices: THIRD_PARTY_NOTICES.md.
-Repository: https://github.com/Cryosimorgh/HLSL-Docs
+TROUBLESHOOTING
+- Do not use old releases with the quarantined hlsl-server.exe.
+- Open the fresh http://127.0.0.1:<port>/ tab created by the launcher,
+  not a file:/// tab from an earlier extracted copy.
+- Logs: %TEMP%/hlsl-playground-run-<id>/server.stderr.log
+- If the Run button reports a compile error, open the Buffer bindings
+  JSON and ensure it matches the HLSL shader's resource registers.
+- If WebGPU is not available in your browser, try a current Chrome/Edge
+  with GPU support; the JavaScript animation still runs.
+- Do not disable or exclude security software to run this project.
+
+Source and issue tracker: https://github.com/Cryosimorgh/HLSL-Docs
