@@ -177,18 +177,18 @@ fn cappedRun(argv: []const []const u8) !std.process.Child.RunResult {
     child.stderr_behavior = .Pipe;
     try child.spawn();
     var finished = std.atomic.Value(bool).init(false);
-    var watcher = try std.Thread.spawn(.{}, childWatch, .{ &child, &finished });
+    const watcher = try std.Thread.spawn(.{}, childWatch, .{ &child, &finished });
+    var joined = false;
     var out = std.ArrayList(u8).init(A);
     var err = std.ArrayList(u8).init(A);
     defer {
         finished.store(true, .release);
-        watcher.join();
+        if (!joined) watcher.join();
     }
     errdefer out.deinit();
     errdefer err.deinit();
     child.collectOutput(&out, &err, max_output) catch |e| {
         finished.store(true, .release);
-        watcher.join();
         _ = child.kill() catch {};
         return e;
     };
@@ -196,6 +196,7 @@ fn cappedRun(argv: []const []const u8) !std.process.Child.RunResult {
     // already killed/reaped the child when the timeout was reached.
     finished.store(true, .release);
     watcher.join();
+    joined = true;
     return .{
         .term = try child.wait(),
         .stdout = try out.toOwnedSlice(),
