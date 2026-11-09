@@ -244,7 +244,7 @@ function Handle-Connection {
     try {$Client.Close()}catch{}
   }
 }
-$listener=New-Object System.Net.Sockets.TcpListener([Net.IPAddress]::Loopback,$Port)
+$listener=[System.Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,$Port)
 try {
   $listener.Start()
   if($ReadyFile){
