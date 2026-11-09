@@ -56,6 +56,8 @@ try {
     assert.equal(page.status,200);
     assert.match(await page.text(),/HLSL Compute Playground/);
     assert.equal((await fetch(base+"/browser-gpu.js")).status,200);
+    assert.equal((await fetch(base+"/gpu-visualizer.js")).status,200,"GPU renderer script must be served.");
+    assert.equal((await fetch(base+"/circle-mask.hlsl")).status,200,"Circle shader reference must be served.");
     assert.equal((await fetch(base+"/unknown")).status,404);
     const cors=await post("/api/session/open",{}, "http://untrusted.example");
     assert.equal(cors.status,403,"Origin policy must reject foreign pages");
