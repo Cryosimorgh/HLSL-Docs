@@ -1,0 +1,64 @@
+name: Publish HLSL Engineer Skill v1.0.0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/publish-hlsl-engineer-v1.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: github.repository == 'Cryosimorgh/HLSL-Docs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate skill and interactive source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s .agents/skills/hlsl-engineer/SKILL.md
+          test -s .agents/skills/hlsl-engineer/references/api-map.md
+          test -s .agents/skills/hlsl-engineer/references/review-matrix.md
+          test -s playground/index.html
+          test -s playground/particle-step.hlsl
+          test -s HLSL-Handbook.md
+          grep -q '^name: hlsl-engineer$' .agents/skills/hlsl-engineer/SKILL.md
+          grep -q '^description: ' .agents/skills/hlsl-engineer/SKILL.md
+          grep -q '\[numthreads(GROUP_SIZE, 1, 1)\]' playground/particle-step.hlsl
+          sed -n '/^<script>$/,/^<\/script>$/p' playground/index.html | sed '1d;$d' > /tmp/hlsl-playground.js
+          test -s /tmp/hlsl-playground.js
+          node --check /tmp/hlsl-playground.js
+
+      - name: Package versioned offline skill archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p release/hlsl-engineer-skill-v1.0.0
+          cp -R .agents/skills/hlsl-engineer release/hlsl-engineer-skill-v1.0.0/hlsl-engineer
+          cp -R playground release/hlsl-engineer-skill-v1.0.0/playground
+          cp README.md HLSL-Handbook.md RELEASE_NOTES.md LICENSE release/hlsl-engineer-skill-v1.0.0/
+          (cd release && zip -qr hlsl-engineer-skill-v1.0.0.zip hlsl-engineer-skill-v1.0.0)
+          test -s release/hlsl-engineer-skill-v1.0.0.zip
+          unzip -tq release/hlsl-engineer-skill-v1.0.0.zip
+
+      - name: Create GitHub release with ZIP asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v1.0.0 >/dev/null 2>&1; then
+            echo "v1.0.0 already exists. Refusing to overwrite an existing release."
+            exit 0
+          fi
+          gh release create v1.0.0 \
+            release/hlsl-engineer-skill-v1.0.0.zip \
+            --target "$GITHUB_SHA" \
+            --title "HLSL Engineer Skill v1.0.0" \
+            --notes-file RELEASE_NOTES.md
