@@ -25,7 +25,7 @@ const ps=spawn("powershell.exe",[
     "-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass",
     "-File",script,"-Port",String(port),"-DxcPath",dxc,"-NagaPath",naga,
     "-SiteRoot",folder,"-ReadyFile",ready,
-    "-StartupGraceMs","9000","-LeaseTimeoutMs","1800","-ExitDelayMs","600"
+    " -StartupGraceMs","9000","-LeaseTimeoutMs","8000","-ExitDelayMs","600"
 ],{windowsHide:true,stdio:["ignore","pipe","pipe"]});
 let stderr="",stdout="";
 ps.stderr.on("data",x=>stderr+=String(x));
@@ -73,12 +73,15 @@ try {
     const invalid=await post("/api/compile",{source:'#include "/etc/passwd"',entry:"CSMain"});
     assert.equal(invalid.status,400);
     if(integration){
-        const shader=await readFile(join(folder,"particle-step.hlsl"),"utf8");
-        const result=await post("/api/compile",{source:shader,entry:"CSMain"});
-        if(result.status!==200) throw Error("Real compiler failed: "+await result.text());
-        const json=await result.json();
-        assert.match(json.wgsl,/@compute/);
-        assert.equal(json.mapping.u0,16);
+        for(const name of ["particle-step.hlsl","circle-mask.hlsl"]){
+            const shader=await readFile(join(folder,name),"utf8");
+            const response=await post("/api/compile",{source:shader,entry:"CSMain"});
+            if(response.status!==200) throw Error(name+" failed: "+await response.text());
+            const converted=await response.json();
+            assert.match(converted.wgsl,/@compute/);
+            assert.equal(converted.mapping.u0,16);
+            console.log("PASS real DXC + Naga conversion:",name);
+        }
     }
     assert.equal((await post("/api/session/close",{token:b})).status,200);
     await exited();
