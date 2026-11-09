@@ -16,13 +16,14 @@ A separate compatibility issue was found: Zig 0.13 binaries were compiled using 
 
 For now, open [the browser-only tutorial](playground/index.html) from a fresh source checkout. It provides the **offline JavaScript particle simulation** and a **real, editable WGSL WebGPU compute lab** that needs no server or native binaries. The WGSL lab does not compile HLSL; native HLSL execution remains disabled. See [security/compatibility issue #1](https://github.com/Cryosimorgh/HLSL-Docs/issues/1). To help investigate, provide the Defender **Protection history** threat name and, if the program crashed, Windows **Application Error** event 1000 exception code.
 
-## One-click interactive HLSL playground (Windows)
+## Browser-only GPU tutorial (current recommended path)
 
-**Extract the [Windows portable ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases) or clone this repository, then double-click `Start-HLSL-Playground.cmd`.** A source checkout automatically downloads a checksum-verified 15 MB Zig/DXC/Naga runtime to your per-user cache the first time. The launcher opens your browser and runs the bundled Zig backend, DXC and prebuilt Naga automatically—no Rust, Cargo, Node or Zig installation, terminal commands or global configuration needed.
+1. Get the current source code using [Code → Download ZIP](https://github.com/Cryosimorgh/HLSL-Docs/archive/refs/heads/main.zip) and extract it.
+2. Open `playground/index.html` in a WebGPU-compatible browser.
+3. Edit the **WGSL** compute shader, change input numbers and click **Run WGSL on GPU**. This does not execute a local process or compile HLSL.
+4. Explore the independent JavaScript particle simulator and the HLSL reference panel.
 
-Press **Close playground & stop server** or close the final tutorial tab to stop the local compiler service. The server also closes after a missed-heartbeat timeout if the browser crashes, without closing unrelated browser tabs.
-
-The browser executes **WGSL translated from HLSL** using WebGPU for compatible compute kernels. It does not execute arbitrary native Direct3D shaders. [Setup, supported features and limitations](playground/README.md) · [v1.3.2 launcher fix](RELEASE_NOTES_v1.3.2.md).
+**Do not run old portable Windows releases while the Defender Trojan investigation is unresolved.** The current native launcher intentionally blocks execution. Old release downloads remain historical archives, not recommended binaries. See [issue #1](https://github.com/Cryosimorgh/HLSL-Docs/issues/1) and the [updated playground instructions](playground/README.md).
 
 ## Learn interactively and use the Agent Skill
 
