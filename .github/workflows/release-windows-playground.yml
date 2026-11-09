@@ -61,7 +61,8 @@ jobs:
           $naga = Join-Path $env:RUNNER_TEMP 'naga-release\bin\naga.exe'
           $spv = Join-Path $env:RUNNER_TEMP 'particle.spv'
           $wgsl = Join-Path $env:RUNNER_TEMP 'particle.wgsl'
-          & $dxc -spirv -fspv-target-env=vulkan1.1 -T cs_6_0 -E CSMain -fvk-t-shift 0 0 -fvk-u-shift 16 0 -fvk-b-shift 32 0 -fvk-s-shift 48 0 -Fo $spv playground/particle-step.hlsl
+          $compileArgs = @('-spirv','-fspv-target-env=vulkan1.1','-T','cs_6_0','-E','CSMain','-fvk-t-shift','0','0','-fvk-u-shift','16','0','-fvk-b-shift','32','0','-fvk-s-shift','48','0','-Fo',$spv,'playground/particle-step.hlsl')
+          & $dxc @compileArgs
           if ($LASTEXITCODE -ne 0) { throw 'DXC did not compile the starter HLSL' }
           & $naga $spv $wgsl
           if ($LASTEXITCODE -ne 0) { throw 'Naga could not translate starter SPIR-V' }
