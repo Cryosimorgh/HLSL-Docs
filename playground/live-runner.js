@@ -102,9 +102,23 @@ function parseManifest() {
        seen.has(r.binding)) throw Error("Invalid/duplicate binding index.");
     seen.add(r.binding);
     if(!["read","read_write","uniform"].includes(r.access)) throw Error("Invalid resource access.");
-    if(r.preset && !["particles","parameters"].includes(r.preset)) throw Error("Invalid resource preset.");
+    if(r.preset && !["particles","parameters","grid"].includes(r.preset)) throw Error("Invalid resource preset.");
     if(r.dataType && !["f32","u32","i32"].includes(r.dataType)) throw Error("Invalid dataType.");
     if(r.display && !["f32","u32","i32","vec4"].includes(r.display)) throw Error("Invalid display format.");
+    if(r.grid) {
+      const g=r.grid;
+      if(!Number.isInteger(g.width)||g.width<2||g.width>128||
+         !Number.isInteger(g.height)||g.height<2||g.height>128||
+         !Number.isFinite(g.xMax)||g.xMax<=0||
+         !Number.isFinite(g.yMax)||g.yMax<=0)
+        throw Error("Invalid grid: use dimensions 2..128 and positive extents.");
+    }
+    if(r.visualize) {
+      const v=r.visualize;
+      if(typeof v!=="object"||!["grid-mask","scatter-mask","scatter"].includes(v.mode)||
+         (v.channel!==undefined&&![0,1,2,3].includes(v.channel)))
+        throw Error("Invalid visualization mode or channel.");
+    }
   }
   if(p.dispatch!=="auto" && (!Array.isArray(p.dispatch) || p.dispatch.length!==3 ||
      !p.dispatch.every(n=>Number.isInteger(n)&&n>=1&&n<=maxGroups)))
@@ -125,11 +139,28 @@ function particles() {
   b.forEach((p,i)=>a.set([p.x,p.y,p.vx,p.vy],i*4));
   return new Uint8Array(a.buffer);
 }
-function bytesFor(r) {
+function gridConfig(spec) {
+  const r=spec.resources.find(r=>r.preset==="grid");
+  return r?.grid||{
+    width:32,height:32,xMax:window.HLSLPlayground.config().worldWidth,yMax:1
+  };
+}
+function gridPoints(g) {
+  const a=new Float32Array(g.width*g.height*4);
+  for(let j=0;j<g.height;j++)for(let i=0;i<g.width;i++) {
+    const p=(j*g.width+i)*4;
+    a[p]=(i+0.5)/g.width*g.xMax;
+    a[p+1]=(j+0.5)/g.height*g.yMax;
+  }
+  return new Uint8Array(a.buffer);
+}
+function bytesFor(r,spec) {
   if(r.preset==="particles")return particles();
   if(r.preset==="parameters")return physicsParams();
+  if(r.preset==="grid")return gridPoints(gridConfig(spec));
   if(r.byteLength!==undefined) {
-    const n=r.byteLength==="particles"?window.HLSLPlayground.config().count*16:r.byteLength;
+    const n=r.byteLength==="particles"?window.HLSLPlayground.config().count*16:
+      r.byteLength==="grid"?gridConfig(spec).width*gridConfig(spec).height*16:r.byteLength;
     if(!Number.isInteger(n)||n<4||n>maxBytes||n%4)throw Error("Invalid buffer size for binding "+r.binding);
     return new Uint8Array(n);
   }
@@ -181,6 +212,7 @@ async function run(){
   if(!source||source.length>65536)throw Error("HLSL source must be 1-65536 characters.");
   setStatus("Compiling HLSL using DXC, then converting SPIR-V to WGSL…");
   results.textContent="";wgslArea.textContent="";
+  window.HLSLGPUVisualize.clear();
   const response=await fetch("/api/compile",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({source,entry:spec.entry}),signal:AbortSignal.timeout(35000)});
   const result=await response.json();
@@ -188,8 +220,10 @@ async function run(){
   const wgsl=result.wgsl;
   wgslArea.textContent=wgsl;
   const entry=compiledEntry(wgsl),size=compiledSize(wgsl);
+  const autoCount=spec.resources.some(r=>r.preset==="grid")?
+    gridConfig(spec).width*gridConfig(spec).height:window.HLSLPlayground.config().count;
   const dispatch=spec.dispatch==="auto"?
-    [Math.ceil(window.HLSLPlayground.config().count/size[0]),1,1]:spec.dispatch;
+    [Math.ceil(autoCount/size[0]),1,1]:spec.dispatch;
   if(dispatch.some(x=>!Number.isInteger(x)||x<1||x>maxGroups))throw Error("Dispatch exceeds tutorial limits.");
   const adapter=await navigator.gpu.requestAdapter();
   if(!adapter)throw Error("No WebGPU adapter available.");
@@ -207,7 +241,7 @@ async function run(){
     let total=0;
     const entries=[];
     for(const r of spec.resources){
-      const input=bytesFor(r),length=Math.max(16,input.byteLength);
+      const input=bytesFor(r,spec),length=Math.max(16,input.byteLength);
       total+=length;if(length>maxBytes||total>maxTotal)throw Error("Buffer capacity limit exceeded.");
       if(r.access==="uniform" && length%16)throw Error("Uniform buffer length must be 16-byte aligned.");
       const usage=r.access==="uniform"?
@@ -234,20 +268,31 @@ async function run(){
     const lines=["GPU compute dispatch completed.","Path: HLSL → DXC SPIR-V → Naga WGSL → WebGPU",
       "Entry: "+entry+"; threads/group: "+size.join("×")+"; groups: "+dispatch.join("×")];
     if(result.log)lines.push("Compiler:\n"+result.log);
+    let preview=null;
+    const isMaskShader=window.HLSLGPUVisualize.hasMaskSource(source);
     for(const {a,mapped} of readbacks){
       await mapped.mapAsync(GPUMapMode.READ);
       const copy=mapped.getMappedRange().slice(0);
       mapped.unmap();
       const format=a.r.display||"f32";
       lines.push("\nBinding "+a.r.binding+" ("+a.length+" bytes):\n"+showBuffer(copy,format));
-      if(a.r.applyToCanvas&&format==="vec4"){
+      if(!preview||a.r.visualize){
+        preview={
+          bytes:copy,format,binding:a.r.binding,visualize:a.r.visualize,
+          source,worldWidth:window.HLSLPlayground.config().worldWidth
+        };
+      }
+      if(a.r.applyToCanvas&&format==="vec4"&&!isMaskShader){
         const values=new Float32Array(copy),n=window.HLSLPlayground.config().count;
         if(values.length>=n*4&&n<=256) {
           window.HLSLPlayground.applyGpuParticles(values);
-          lines.push("Updated "+n+" particle states in the visualizer.");
+          lines.push("Updated "+n+" particle states in the physics visualizer.");
         }
+      } else if(a.r.applyToCanvas&&isMaskShader){
+        lines.push("Mask output was NOT applied as particle velocity; see GPU result visualization.");
       }
     }
+    if(preview)window.HLSLGPUVisualize.render(preview);
     results.textContent=lines.join("\n");
     setStatus("GPU run succeeded. Review buffer output below.");
   }finally{
@@ -259,7 +304,7 @@ async function run(){
 runButton.addEventListener("click",async()=>{
   runButton.disabled=true;
   try{await run()}
-  catch(e){results.textContent=String(e.stack||e);setStatus("Run failed: "+e.message,true)}
+  catch(e){window.HLSLGPUVisualize.clear();results.textContent=String(e.stack||e);setStatus("Run failed: "+e.message,true)}
   finally{runButton.disabled=false}
 });
 $("restore-example").addEventListener("click",()=>{
@@ -287,6 +332,50 @@ $("example-scale").addEventListener("click",()=>{
       {binding:16,access:"read_write",byteLength:32,inspect:true,display:"f32"}
     ]},null,2);
   setStatus("Loaded array-scaling example. Edit it and click Run on GPU.");
+});
+$("example-circle").addEventListener("click",()=>{
+  const grid={width:32,height:32,xMax:window.HLSLPlayground.config().worldWidth,yMax:1};
+  editor.value=[
+    "// Circle mask: values come from a 32×32 2D GPU sample grid.",
+    "// t0: float4 positions; u0: float4(x,y,mask,0); b0: circle params.",
+    "// Use EdgeWidth instead of fwidth() (unsupported by current Naga).",
+    "cbuffer CircleParams : register(b0)",
+    "{",
+    "    float CircleCenterX;",
+    "    float CircleCenterY;",
+    "    float CircleRadius;",
+    "    float EdgeWidth;",
+    "    float SampleCount;",
+    "    float3 Padding;",
+    "};",
+    "StructuredBuffer<float4> Input : register(t0);",
+    "RWStructuredBuffer<float4> Output : register(u0);",
+    "[numthreads(64, 1, 1)]",
+    "void CSMain(uint3 tid : SV_DispatchThreadID)",
+    "{",
+    "    uint i = tid.x;",
+    "    if (i >= (uint)SampleCount) return;",
+    "    float2 pos = Input[i].xy;",
+    "    float d = length(pos - float2(CircleCenterX, CircleCenterY));",
+    "    float aa = max(EdgeWidth, 0.00001f);",
+    "    float mask = 1.0f - smoothstep(CircleRadius - aa, CircleRadius + aa, d);",
+    "    Output[i] = float4(pos, mask, 0.0f);",
+    "}"
+  ].join("\n");
+  editor.dataset.dirty="1";
+  manifestArea.value=JSON.stringify({
+    entry:"CSMain",dispatch:"auto",resources:[
+      {binding:0,access:"read",preset:"grid",grid},
+      {binding:16,access:"read_write",byteLength:"grid",inspect:true,
+       display:"vec4",applyToCanvas:false,
+       visualize:{mode:"grid-mask",grid,channel:2}},
+      {binding:32,access:"uniform",dataType:"f32",
+       data:[grid.xMax*0.5,0.5,0.34,0.025,grid.width*grid.height,0,0,0]}
+    ]
+  },null,2);
+  window.HLSLGPUVisualize.clear();
+  results.textContent="Circle mask loaded. Click Compile & Run HLSL to see the real GPU mask.";
+  setStatus("Circle mask ready: 32×32 points, radius 0.34, softness 0.025. Change b0 uniform data and rerun.");
 });
 $("show-wgsl").addEventListener("change",e=>wgslArea.hidden=!e.target.checked);
 setStatus(isBridgeOrigin?
