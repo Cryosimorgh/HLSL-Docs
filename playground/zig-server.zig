@@ -185,7 +185,7 @@ fn compileHlsl(req: *Request) void {
     while (iter.next()) |line| {
         const trim = std.mem.trim(u8, line, " \t\r");
         if (std.mem.startsWith(u8, trim, "#")) {
-            const rest = std.mem.trimStart(u8, trim[1..], " \t");
+            const rest = std.mem.trimLeft(u8, trim[1..], " \t");
             if (std.mem.startsWith(u8, rest, "include") or std.mem.startsWith(u8, rest, "import")) {
                 failure(req, .bad_request, "Includes/imports are disabled; paste dependencies inline."); return;
             }
