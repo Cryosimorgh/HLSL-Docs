@@ -111,7 +111,8 @@ jobs:
           }
           # Smoke-test the actual bundled PowerShell launcher with no browser UI.
           & (Join-Path $portable 'Start-HLSL-Playground.ps1') -NoBrowser
-          if ($LASTEXITCODE -ne 0) { throw 'Windows one-click launcher failed' }
+          # A PowerShell script reports failures with throw, not LASTEXITCODE.
+          # Verify the service and lifecycle directly below.
           $runtimeDir = Join-Path $portable '.playground-runtime'
           $ready = Get-ChildItem -LiteralPath $runtimeDir -File -Filter ready.json -Recurse |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
