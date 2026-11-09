@@ -1,4 +1,4 @@
-name: Release PowerShell HLSL client v1.5.1
+name: Release PowerShell HLSL client v1.5.2
 on:
   push:
     branches: [main]
@@ -20,6 +20,8 @@ jobs:
         run: |
           node playground/test-frontend.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Frontend test failed' }
+          node playground/test-gpu-visualizer.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'GPU-readback visualization unit test failed' }
           node playground/test-powershell.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Server test failed' }
       - name: Download upstream DXC and extract prebuilt Naga
@@ -56,15 +58,15 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $out=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5'
-          $app=Join-Path $out 'HLSL-Playground-Windows-v1.5.1'
+          $app=Join-Path $out 'HLSL-Playground-Windows-v1.5.2'
           $toolOnly=Join-Path $out 'compiler-only'
           foreach ($dir in @($app,(Join-Path $app 'playground'),(Join-Path $app 'tools\dxc'),(Join-Path $app 'tools\naga'),(Join-Path $toolOnly 'tools\dxc'),(Join-Path $toolOnly 'tools\naga'))) {
             New-Item -ItemType Directory -Path $dir -Force | Out-Null
           }
-          foreach ($name in @('index.html','live-runner.js','browser-gpu.js','particle-step.hlsl','server.ps1','README.md')) {
+          foreach ($name in @('index.html','live-runner.js','browser-gpu.js','gpu-visualizer.js','circle-mask.hlsl','particle-step.hlsl','server.ps1','README.md')) {
             Copy-Item -LiteralPath (Join-Path 'playground' $name) -Destination (Join-Path $app 'playground')
           }
-          foreach ($name in @('Start-HLSL-Playground.cmd','Start-HLSL-Playground.ps1','README-WINDOWS.txt','README.md','HLSL-Handbook.md','RELEASE_NOTES_v1.5.1.md','LICENSE','THIRD_PARTY_NOTICES.md')) {
+          foreach ($name in @('Start-HLSL-Playground.cmd','Start-HLSL-Playground.ps1','README-WINDOWS.txt','README.md','HLSL-Handbook.md','RELEASE_NOTES_v1.5.2.md','LICENSE','THIRD_PARTY_NOTICES.md')) {
             Copy-Item -LiteralPath $name -Destination $app
           }
           Copy-Item -LiteralPath 'docs' -Destination $app -Recurse
@@ -80,8 +82,8 @@ jobs:
           Copy-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'naga.exe') -Destination (Join-Path $toolOnly 'tools\naga\naga.exe')
           $actual=@(Get-ChildItem -LiteralPath $app -Recurse -File -Filter '*.exe' | Select-Object -ExpandProperty Name)
           if(@($actual | Where-Object { $_ -notin @('dxc.exe','naga.exe') }).Count -ne 0) { throw 'Unexpected executable! Custom server not allowed' }
-          $appZip=Join-Path $out 'HLSL-Playground-Windows-v1.5.1.zip'
-          $toolsZip=Join-Path $out 'HLSL-CompilerTools-v1.5.1.zip'
+          $appZip=Join-Path $out 'HLSL-Playground-Windows-v1.5.2.zip'
+          $toolsZip=Join-Path $out 'HLSL-CompilerTools-v1.5.2.zip'
           Compress-Archive -LiteralPath $app -DestinationPath $appZip -CompressionLevel Optimal
           Compress-Archive -LiteralPath (Join-Path $toolOnly 'tools') -DestinationPath $toolsZip -CompressionLevel Optimal
           @($appZip,$toolsZip) | ForEach-Object {
@@ -91,7 +93,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          $app=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5\HLSL-Playground-Windows-v1.5.1'
+          $app=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5\HLSL-Playground-Windows-v1.5.2'
           & (Join-Path $app 'Start-HLSL-Playground.ps1') -NoBrowser
           $ready=Get-ChildItem -LiteralPath $env:TEMP -Directory -Filter 'hlsl-playground-run-*' |
             Sort-Object LastWriteTime -Descending |
@@ -103,10 +105,14 @@ jobs:
           if($health.backend -ne 'powershell-dotnet') { throw 'Wrong server backend' }
           $session=Invoke-RestMethod -Uri "$($info.url)/api/session/open" -Method POST -ContentType 'application/json' -Body '{}'
           try {
-            $src=Get-Content -LiteralPath 'playground/particle-step.hlsl' -Raw
-            $body=@{entry='CSMain';source=$src} | ConvertTo-Json -Compress
-            $result=Invoke-RestMethod -Uri "$($info.url)/api/compile" -Method POST -ContentType 'application/json' -Body $body
-            if($result.wgsl -notmatch '@compute') { throw 'Compiled shader not returned' }
+            $visual=Invoke-WebRequest -Uri "$($info.url)/gpu-visualizer.js" -UseBasicParsing
+            if($visual.StatusCode -ne 200) { throw 'Visual output script is missing from package server' }
+            foreach($sample in @('particle-step.hlsl','circle-mask.hlsl')) {
+              $src=Get-Content -LiteralPath (Join-Path 'playground' $sample) -Raw
+              $body=@{entry='CSMain';source=$src} | ConvertTo-Json -Compress
+              $result=Invoke-RestMethod -Uri "$($info.url)/api/compile" -Method POST -ContentType 'application/json' -Body $body
+              if($result.wgsl -notmatch '@compute') { throw "Compiled shader not returned for $sample" }
+            }
           } finally {
             $close=@{token=$session.token} | ConvertTo-Json -Compress
             Invoke-RestMethod -Uri "$($info.url)/api/session/close" -Method POST -ContentType 'application/json' -Body $close | Out-Null
@@ -127,8 +133,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference='Stop'
-          gh release view v1.5.1 *> $null
-          if($LASTEXITCODE -eq 0) { throw 'v1.5.1 already exists' }
+          gh release view v1.5.2 *> $null
+          if($LASTEXITCODE -eq 0) { throw 'v1.5.2 already exists' }
           $out=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5'
-          gh release create v1.5.1 (Join-Path $out 'HLSL-Playground-Windows-v1.5.1.zip') (Join-Path $out 'HLSL-CompilerTools-v1.5.1.zip') (Join-Path $out 'SHA256SUMS.txt') --target $env:GITHUB_SHA --title 'HLSL Playground v1.5.1 — Working PowerShell/.NET Client' --notes-file RELEASE_NOTES_v1.5.1.md
+          gh release create v1.5.2 (Join-Path $out 'HLSL-Playground-Windows-v1.5.2.zip') (Join-Path $out 'HLSL-CompilerTools-v1.5.2.zip') (Join-Path $out 'SHA256SUMS.txt') --target $env:GITHUB_SHA --title 'HLSL Playground v1.5.2 — Real GPU Output Visualization' --notes-file RELEASE_NOTES_v1.5.2.md
           if($LASTEXITCODE -ne 0) { throw 'Release publish failed' }
