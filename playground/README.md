@@ -15,6 +15,38 @@
 
 **From a source checkout:** update your clone (`git pull`) and double-click the CMD launcher. If the compiler tools are missing, the launcher downloads the **compiler-only** v1.5.0 ZIP, verifies its pinned SHA-256 and caches it in your per-user application-data directory. It does not download a custom server EXE.
 
+## See what your HLSL shader actually produced
+
+The new **GPU output visualization** appears above the raw buffer dump after **Compile & Run HLSL**. Unlike the JavaScript particle demo, it is drawn from `GPUBuffer.mapAsync()` **after the translated shader has executed on WebGPU**.
+
+- **Circle mask example:** click the new preset, then **Compile & Run HLSL**. It generates 1,024 input positions on a 32×32 grid, uses a circle radius of `0.34` (world units) and edge width `0.025`, and displays a 2D heatmap. Aqua cells have mask near 1; dark cells have mask near 0. A summary reports min, max, mean and count of cells with mask ≥0.5.
+- **Other float4 outputs:** a scatter plot shows x/y coordinates; the color represents the third float channel (z). If the source contains a circle mask, the summary identifies all-zero masks instead of leaving a blank result.
+- **Scalar buffers:** numeric outputs such as `float`, `uint` and `int` appear as bar charts. The full buffer statistics are based on all values, even if the textual dump is truncated.
+
+To customize the view, set `resources[].visualize` on the inspected output, for example:
+
+~~~json
+{
+  "binding": 16,
+  "access": "read_write",
+  "byteLength": "grid",
+  "inspect": true,
+  "display": "vec4",
+  "applyToCanvas": false,
+  "visualize": {
+    "mode": "grid-mask",
+    "grid": { "width": 32, "height": 32, "xMax": 2.2, "yMax": 1 },
+    "channel": 2
+  }
+}
+~~~
+
+The input `t0` uses `{"binding":0,"access":"read","preset":"grid","grid":{"width":32,"height":32,"xMax":2.2,"yMax":1}}`. The grid preset generates positions in float4 tuples, so no huge JSON array needs to be pasted. When dispatch is `"auto"`, the client dispatches enough workgroups to cover the entire grid, not only the live physics particle count.
+
+**Why an earlier circle shader looked blank:** its `radius` came from the physics ball radius at cbuffer byte 20, not a configurable circle radius. With particles resting near `y=0.986` and the circle centered at `y=0.5`, every computed mask was zero. Moreover, applying `float4(x,y,mask,0)` back into the physics simulation treated the mask as x-velocity. The client now keeps mask results separate and reports zero coverage explicitly.
+
+The mask example uses an explicit `EdgeWidth` instead of `fwidth()` because the current Naga translator doesn't accept the `SPV_KHR_compute_shader_derivatives` extension. It also uses scalar float padding in its b0 cbuffer to avoid WGSL uniform alignment incompatibilities with `float3`.
+
 ## What happens when you click Run
 
 ~~~text
