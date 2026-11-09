@@ -167,7 +167,7 @@ function Compile-Hlsl {
     $naga=Run-Tool $NagaPath @($spirv,$wgsl) $tmp
     if($naga.Code -ne 0) { throw ('Naga: '+$naga.Log) }
     if(-not [IO.File]::Exists($wgsl)) { throw 'Naga produced no WGSL' }
-    $file=New-Object IO.FileInfo($wgsl)
+    $file=[System.IO.FileInfo]::new($wgsl)
     if($file.Length -lt 1 -or $file.Length -gt 524288) { throw 'WGSL output exceeded limit' }
     return @{
       wgsl=[IO.File]::ReadAllText($wgsl,$utf8)
