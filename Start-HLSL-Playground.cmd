@@ -5,7 +5,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0Start-HLSL-Playgro
 if errorlevel 1 (
     echo.
     echo The HLSL Playground could not start. Check the error above.
-    echo The launcher will obtain the verified Zig, DXC and Naga portable runtime automatically.
+    echo This client uses Windows PowerShell/.NET, DXC and Naga; no custom Zig server is executed.
     pause
     exit /b 1
 )
