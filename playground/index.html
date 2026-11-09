@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Interactive HLSL compute shader tutorial: explore GPU workgroups, SV_DispatchThreadID, gravity, restitution, timestep and DXC-compilable HLSL examples. Works offline.">
+<title>HLSL Compute Playground — Interactive GPU Programming Tutorial</title>
+<style>
+:root{color-scheme:dark;font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:#0b1120;color:#ebf4ff}
+*{box-sizing:border-box}body{margin:0}.wrap{max-width:1390px;margin:0 auto;padding:24px}
+a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem);line-height:1.17;margin:6px 0 8px}h2{font-size:1.1rem;margin:0 0 12px}h3{font-size:.98rem;margin:0 0 8px}.eyebrow{color:#7dd3fc;text-transform:uppercase;letter-spacing:.1em;font-size:.73rem;font-weight:700}p{margin:7px 0 13px}.muted{color:#aac0d7;font-size:.9rem}.layout{display:grid;grid-template-columns:minmax(255px,310px) minmax(0,1fr);gap:16px;align-items:start}.panel{border:1px solid #293b53;border-radius:15px;background:#111c2f;padding:19px;min-width:0}.panel.controls{position:sticky;top:12px}.ctrl{margin:0 0 14px}.ctrl>label{display:flex;justify-content:space-between;gap:12px;font-size:.89rem;margin-bottom:5px}.ctrl output{font-variant-numeric:tabular-nums;color:#8ce7d0;font-weight:650}.ctrl input[type=range]{width:100%;accent-color:#58dbbf;cursor:pointer}.ctrl select{width:100%;font:inherit;background:#18283f;color:#e9f6ff;border:1px solid #45617c;border-radius:7px;padding:8px}.buttons{display:flex;flex-wrap:wrap;gap:8px}.buttons button,.primary{font:inherit;font-weight:650;cursor:pointer;background:#203852;color:#e7f9ff;border:1px solid #476680;border-radius:9px;padding:9px 13px}.buttons button:hover,.primary:hover{background:#30516c}.buttons .primary{background:#0f786d;border-color:#22b8a4}.buttons .primary:hover{background:#159887}.buttons button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #facc15;outline-offset:3px}canvas{display:block;width:100%;aspect-ratio:920/430;background:#081424;border-radius:10px;border:1px solid #38526c;touch-action:none;cursor:crosshair}.hint{margin:10px 0;font-size:.86rem;color:#b0cce4}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.stat{background:#172941;border:1px solid #2b425d;border-radius:9px;padding:10px}.stat strong{display:block;font-size:clamp(1.05rem,2vw,1.35rem);font-variant-numeric:tabular-nums}.stat span{font-size:.76rem;color:#a8c3d9}.notice{font-size:.85rem;min-height:24px;color:#9ce3ff}.group{border-radius:8px;border:1px solid #35506b;padding:8px;margin:7px 0}.group-title{display:flex;justify-content:space-between;font-size:.8rem;color:#bad6e8}.group-track{height:9px;background:#39455a;margin-top:6px;border-radius:5px;overflow:hidden}.group-filled{height:100%;background:#32d1af}.below{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(275px,.85fr);gap:16px;margin-top:16px}.code-panel{min-width:0}pre{overflow:auto;max-height:580px;background:#070e1a;border:1px solid #314661;border-radius:10px;padding:16px;tab-size:4;color:#ccebf8;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre}.steps{counter-reset:lab}.step{counter-increment:lab;border-top:1px solid #33445c;padding:13px 0}.step:before{content:counter(lab) ". ";color:#4de1c5;font-weight:800}.step strong{color:#f2f9ff}.step p{font-size:.9rem;margin:4px 0 0;color:#b9cde1}.foot{margin-top:18px;font-size:.87rem;color:#a7c1d6}.pill{display:inline-block;border:1px solid #326f77;color:#b1fff1;border-radius:99px;font-size:.75rem;padding:2px 9px;margin-left:8px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}@media(max-width:850px){.layout,.below{grid-template-columns:1fr}.panel.controls{position:static}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header>
+<div class="eyebrow">Learn HLSL by experimenting <span class="pill">Offline · No build required</span></div>
+<h1>Compute Shader Playground</h1>
+<p class="muted">Change GPU-style parameters and watch 2D particles move. See how <code>numthreads</code>, <code>SV_DispatchThreadID</code>, bounds guards and constant buffers map to a real HLSL kernel.</p>
+<p class="hint"><strong>Execution boundary:</strong> This page runs a <strong>JavaScript simulation</strong> of equivalent compute-shader math, not actual HLSL or WebGPU. The linked <a href="particle-step.hlsl">particle-step.hlsl</a> is separately compilable with DXC and requires a D3D12 host to execute.</p>
+</header>
+<div class="layout">
+<aside class="panel controls" aria-label="Simulation controls">
+<h2>1. Set shader parameters</h2>
+<div class="ctrl"><label for="count">Particle count <output id="countValue">64</output></label><input id="count" type="range" min="1" max="256" value="64" step="1"></div>
+<div class="ctrl"><label for="gravity">Gravity <output id="gravityValue">1.20</output></label><input id="gravity" type="range" min="0" max="5" value="1.2" step=".1"></div>
+<div class="ctrl"><label for="bounce">Wall restitution <output id="bounceValue">0.75</output></label><input id="bounce" type="range" min="0" max="1" value=".75" step=".05"></div>
+<div class="ctrl"><label for="drag">Drag <output id="dragValue">0.05</output></label><input id="drag" type="range" min="0" max="2" value=".05" step=".05"></div>
+<div class="ctrl"><label for="timestep">Fixed time step <output id="timestepValue">16 ms</output></label><input id="timestep" type="range" min="4" max="40" value="16" step="1"></div>
+<div class="ctrl"><label for="groupsize">Threads per group</label><select id="groupsize"><option>32</option><option selected>64</option><option>128</option><option>256</option></select></div>
+<div class="ctrl"><label for="speed">Playback speed <output id="speedValue">1.00×</output></label><input id="speed" type="range" min=".25" max="2" value="1" step=".25"></div>
+<div class="buttons"><button class="primary" id="pause" type="button">Pause</button><button id="step" type="button">Step once</button><button id="reset" type="button">Reset</button></div>
+<p class="hint">Drag on the canvas to launch one more ball (up to 256). The count slider recreates a reproducible layout.</p>
+</aside>
+<section class="panel" aria-label="Live visualization">
+<h2>2. Observe the particle simulation</h2>
+<canvas id="scene" width="920" height="430" aria-label="Particle simulation. Use controls to change motion; drag to launch a ball." role="img">Your browser does not support Canvas.</canvas>
+<div class="stats" aria-live="polite">
+<div class="stat"><strong id="statParticles">64</strong><span>Active particles</span></div>
+<div class="stat"><strong id="statGroups">1</strong><span>Compute workgroups</span></div>
+<div class="stat"><strong id="statIdle">0</strong><span>Idle final-group lanes</span></div>
+<div class="stat"><strong id="statSteps">0</strong><span>Simulation steps</span></div>
+</div>
+<p class="notice" id="notice" role="status">Drag in the simulation to launch a particle.</p>
+<h3>3. See how the work is dispatched</h3>
+<p class="muted">The JavaScript model iterates each workgroup and lane. Threads with <code>i &gt;= count</code> do no work, just like the shader's bounds guard.</p>
+<div id="groups" aria-label="Workgroup occupancy visualization"></div>
+</section>
+</div>
+<div class="below">
+<section class="panel code-panel">
+<h2>4. Inspect the corresponding HLSL <span class="pill">DXC · cs_6_0</span></h2>
+<p class="muted">The code below is a real compute shader; changing thread-group size updates its macro and the comments report your current cbuffer values. The browser does not compile or dispatch it.</p>
+<div class="buttons"><button id="copy" type="button">Copy shader code</button><button id="download" type="button">Save .hlsl file</button></div>
+<pre id="code" aria-label="HLSL shader source"></pre>
+<p class="hint">Compile with <code>dxc -T cs_6_0 -E CSMain -Fo particle-step.dxil particle-step.hlsl</code>. You need a host program with b0, t0 and u0 bindings and a compute PSO to run it on a GPU.</p>
+</section>
+<section class="panel steps">
+<h2>5. Try three experiments</h2>
+<div class="step"><strong>What changes with restitution?</strong><p>Set restitution to <strong>1.00</strong> and watch near-elastic wall bounces; then set <strong>0.00</strong> to make velocity along the impact normal vanish at contact. Drag remains a separate energy loss.</p></div>
+<div class="step"><strong>Why are some lanes idle?</strong><p>Set particle count to <strong>65</strong>, group size to <strong>64</strong>. You need 2 groups = 128 dispatched lanes, but only 65 are active. The remaining <strong>63</strong> must exit at the bounds check.</p></div>
+<div class="step"><strong>What does the timestep do?</strong><p>Compare <strong>4 ms</strong> and <strong>40 ms</strong> at the same gravity. The kernel uses an explicit fixed-step integrator. Larger steps can overshoot walls more and may be less accurate.</p></div>
+<div class="step"><strong>What does workgroup size do?</strong><p>Change 32 ↔ 256. Watch group count and idle lanes change while the simulation math remains the same. Larger groups are not automatically faster on actual GPUs.</p></div>
+<h3>HLSL ↔ simulation mapping</h3>
+<p><strong>cbuffer Params:</strong> Values entered on the left would be uploaded from CPU code into a constant buffer in a real D3D12 application.</p>
+<p><strong>Source / Destination:</strong> Each invocation reads one ball and writes its new state, avoiding cross-thread overwrites. The JavaScript implementation models this using separate arrays each step.</p>
+<p><strong>numthreads:</strong> Declares how many threads a group contains. The host dispatches <code>ceil(count / GROUP_SIZE)</code> workgroups.</p>
+<p><strong>SV_DispatchThreadID:</strong> Gives a global index. Use it to map a lane to one particle.</p>
+<p><strong>Limitations:</strong> No ball-to-ball collisions, no GPU parallel scheduling, no shader compilation and no hardware performance measurements in this browser view. It teaches dispatch structure and basic update equations only.</p>
+</section>
+</div>
+<p class="foot">Made for the <a href="../README.md">HLSL Handbook</a> and the <a href="../.agents/skills/hlsl-engineer/SKILL.md">hlsl-engineer Agent Skill</a>. No external scripts, libraries, tracking or network requests are required.</p>
+</main>
+
+<script id="shader-source" type="text/plain">
+// DXC-compilable HLSL: dxc -T cs_6_0 -E CSMain -Fo particle-step.dxil particle-step.hlsl
+#ifndef GROUP_SIZE
+#define GROUP_SIZE 64
+#endif
+
+struct Ball
+{
+    float2 position; // world units: y increases downward
+    float2 velocity;
+};
+StructuredBuffer<Ball> Source : register(t0);
+RWStructuredBuffer<Ball> Destination : register(u0);
+cbuffer Params : register(b0)
+{
+    float dt, gravity, bounce, drag;
+    uint count;
+    float radius, worldWidth, padding;
+};
+[numthreads(GROUP_SIZE, 1, 1)]
+void CSMain(uint3 tid : SV_DispatchThreadID)
+{
+    uint i = tid.x;
+    if (i >= count) return;
+    Ball b = Source[i];
+    b.velocity.y += gravity * dt;
+    b.velocity *= exp(-drag * dt);
+    b.position += b.velocity * dt;
+    float left = radius, right = worldWidth - radius;
+    float top = radius, bottom = 1.0f - radius;
+    if (b.position.x < left)
+    {
+        b.position.x = left;
+        b.velocity.x = abs(b.velocity.x) * bounce;
+    }
+    else if (b.position.x > right)
+    {
+        b.position.x = right;
+        b.velocity.x = -abs(b.velocity.x) * bounce;
+    }
+    if (b.position.y < top)
+    {
+        b.position.y = top;
+        b.velocity.y = abs(b.velocity.y) * bounce;
+    }
+    else if (b.position.y > bottom)
+    {
+        b.position.y = bottom;
+        b.velocity.y = -abs(b.velocity.y) * bounce;
+    }
+    Destination[i] = b;
+}
+</script>
+<script>
+(function () {
+    "use strict";
+    const canvas = document.getElementById("scene");
+    const ctx = canvas.getContext("2d");
+    const worldWidth = canvas.width / canvas.height;
+    const radius = 0.014;
+    const maxCount = 256;
+    const ids = ["count", "gravity", "bounce", "drag", "timestep", "groupsize", "speed"];
+    const el = {};
+    ids.forEach(function (id) { el[id] = document.getElementById(id); });
+    let balls = [], steps = 0, paused = false, accumulator = 0, previous = 0, dragStart = null, dragEnd = null, noticeExpire = 0;
+    const setText = function (id, text) { document.getElementById(id).textContent = text; };
+    const val = function (id) { return Number(el[id].value); };
+    function showMessage(text) {
+        setText("notice", text);
+        noticeExpire = performance.now() + 4200;
+    }
+    function updateLabels() {
+        setText("countValue", String(val("count")));
+        setText("gravityValue", val("gravity").toFixed(2));
+        setText("bounceValue", val("bounce").toFixed(2));
+        setText("dragValue", val("drag").toFixed(2));
+        setText("timestepValue", String(val("timestep")) + " ms");
+        setText("speedValue", val("speed").toFixed(2) + "×");
+    }
+    function reset() {
+        const n = val("count");
+        const columns = Math.ceil(Math.sqrt(n * worldWidth));
+        const rows = Math.ceil(n / columns);
+        const result = [];
+        for (let i = 0; i < n; i++) {
+            const x = (i % columns + 0.5) * worldWidth / columns;
+            const y = (Math.floor(i / columns) + 0.5) / rows;
+            result.push({
+                x: x, y: y,
+                vx: (((i * 7) % 11) - 5) * 0.12,
+                vy: -0.12 - ((i * 13) % 9) * 0.04,
+                id: i
+            });
+        }
+        balls = result;
+        steps = 0;
+        accumulator = 0;
+        updateLabels();
+        updateStats();
+        updateGroups();
+    }
+    function simulate() {
+        const n = balls.length, size = val("groupsize"), dt = val("timestep") / 1000;
+        const gravity = val("gravity"), bounce = val("bounce"), drag = val("drag");
+        const damping = Math.exp(-drag * dt);
+        const next = new Array(n);
+        for (let group = 0; group < Math.ceil(n / size); group++) {
+            for (let lane = 0; lane < size; lane++) {
+                const i = group * size + lane;
+                if (i >= n) continue; // HLSL: if (tid.x >= count) return;
+                const a = balls[i];
+                let vx = a.vx * damping, vy = (a.vy + gravity * dt) * damping;
+                let x = a.x + vx * dt, y = a.y + vy * dt;
+                if (x < radius) { x = radius; vx = Math.abs(vx) * bounce; }
+                else if (x > worldWidth - radius) { x = worldWidth - radius; vx = -Math.abs(vx) * bounce; }
+                if (y < radius) { y = radius; vy = Math.abs(vy) * bounce; }
+                else if (y > 1 - radius) { y = 1 - radius; vy = -Math.abs(vy) * bounce; }
+                next[i] = { x: x, y: y, vx: vx, vy: vy, id: a.id };
+            }
+        }
+        balls = next;
+        steps++;
+    }
+    function updateStats() {
+        const n = balls.length, size = val("groupsize"), groups = Math.ceil(n / size);
+        setText("statParticles", String(n));
+        setText("statGroups", String(groups));
+        setText("statIdle", String(groups * size - n));
+        setText("statSteps", String(steps));
+    }
+    function updateGroups() {
+        const n = balls.length, size = val("groupsize"), groups = Math.ceil(n / size);
+        const root = document.getElementById("groups");
+        root.textContent = "";
+        const shown = groups <= 4 ? Array.from({ length: groups }, function (_, i) { return i; }) : [0, 1, 2, groups - 1];
+        shown.forEach(function (g, order) {
+            if (groups > 4 && order === 3) {
+                const dots = document.createElement("p");
+                dots.className = "muted";
+                dots.textContent = "… intermediate groups omitted …";
+                root.appendChild(dots);
+            }
+            const active = Math.min(size, Math.max(0, n - g * size));
+            const card = document.createElement("div");
+            card.className = "group";
+            const row = document.createElement("div");
+            row.className = "group-title";
+            const a = document.createElement("span");
+            a.textContent = "Group " + g;
+            const b = document.createElement("span");
+            b.textContent = active + " active / " + size + " lanes";
+            row.appendChild(a); row.appendChild(b);
+            const track = document.createElement("div");
+            track.className = "group-track";
+            const filled = document.createElement("div");
+            filled.className = "group-filled";
+            filled.style.width = (100 * active / size).toFixed(2) + "%";
+            track.appendChild(filled);
+            card.appendChild(row); card.appendChild(track);
+            root.appendChild(card);
+        });
+    }
+    function shaderText() {
+        const original = document.getElementById("shader-source").textContent.trim();
+        const header = "// Sample host cbuffer values: dt=" + (val("timestep") / 1000).toFixed(3) +
+            ", gravity=" + val("gravity").toFixed(2) + ", bounce=" + val("bounce").toFixed(2) +
+            ", drag=" + val("drag").toFixed(2) + ", count=" + balls.length +
+            ", radius=" + radius.toFixed(3) + ", worldWidth=" + worldWidth.toFixed(6) + "\n";
+        return header + original.replace("#define GROUP_SIZE 64", "#define GROUP_SIZE " + val("groupsize")) + "\n";
+    }
+    function updateShader() { setText("code", shaderText()); }
+    function draw() {
+        const w = canvas.width, h = canvas.height;
+        ctx.fillStyle = "#081424"; ctx.fillRect(0, 0, w, h);
+        ctx.strokeStyle = "#19334b"; ctx.lineWidth = 1;
+        for (let x = 0; x <= w; x += h / 4) {
+            ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        }
+        for (let y = 0; y <= h; y += h / 4) {
+            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+        }
+        const border = radius * h;
+        ctx.strokeStyle = "#407b91";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(border, border, w - 2 * border, h - 2 * border);
+        balls.forEach(function (b) {
+            const speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+            const hue = 190 + Math.min(65, speed * 55);
+            ctx.beginPath(); ctx.arc(b.x * h, b.y * h, radius * h, 0, Math.PI * 2);
+            ctx.fillStyle = "hsl(" + hue + " 90% 70%)";
+            ctx.shadowBlur = 10; ctx.shadowColor = "#36d3e4"; ctx.fill(); ctx.shadowBlur = 0;
+        });
+        if (dragStart && dragEnd) {
+            ctx.beginPath();
+            ctx.moveTo(dragStart.x * h, dragStart.y * h);
+            ctx.lineTo(dragEnd.x * h, dragEnd.y * h);
+            ctx.lineWidth = 3; ctx.strokeStyle = "#facc15"; ctx.stroke();
+        }
+    }
+    function frame(now) {
+        if (!previous) previous = now;
+        const elapsed = Math.min((now - previous) / 1000, 0.1);
+        previous = now;
+        if (!paused) {
+            const dt = val("timestep") / 1000;
+            accumulator += elapsed * val("speed");
+            let iterations = 0;
+            while (accumulator >= dt && iterations < 12) {
+                simulate();
+                accumulator -= dt;
+                iterations++;
+            }
+            if (iterations === 12 && accumulator >= dt) accumulator = 0;
+            if (iterations) updateStats();
+        }
+        if (noticeExpire && now > noticeExpire) {
+            setText("notice", "Drag in the simulation to launch a particle.");
+            noticeExpire = 0;
+        }
+        draw();
+        requestAnimationFrame(frame);
+    }
+    function pointerPosition(e) {
+        const box = canvas.getBoundingClientRect();
+        return {
+            x: Math.max(radius, Math.min(worldWidth - radius, (e.clientX - box.left) / box.width * worldWidth)),
+            y: Math.max(radius, Math.min(1 - radius, (e.clientY - box.top) / box.height))
+        };
+    }
+    canvas.addEventListener("pointerdown", function (e) {
+        dragStart = pointerPosition(e);
+        dragEnd = dragStart;
+        canvas.setPointerCapture(e.pointerId);
+    });
+    canvas.addEventListener("pointermove", function (e) {
+        if (dragStart) dragEnd = pointerPosition(e);
+    });
+    canvas.addEventListener("pointerup", function (e) {
+        if (!dragStart) return;
+        const end = pointerPosition(e);
+        if (balls.length < maxCount) {
+            const dx = end.x - dragStart.x, dy = end.y - dragStart.y;
+            balls.push({ x: dragStart.x, y: dragStart.y,
+                vx: Math.abs(dx) < .001 ? .25 : dx * 2.5,
+                vy: Math.abs(dy) < .001 ? -.2 : dy * 2.5,
+                id: balls.length });
+            el.count.value = String(balls.length);
+            updateLabels(); updateStats(); updateGroups(); updateShader();
+            showMessage("Launched ball " + balls.length + " of " + maxCount + ".");
+        } else {
+            showMessage("Capacity reached: 256 particles. Lower the count or reset.");
+        }
+        dragStart = dragEnd = null;
+    });
+    canvas.addEventListener("pointercancel", function () { dragStart = dragEnd = null; });
+    el.count.addEventListener("input", function () {
+        reset(); updateShader();
+    });
+    ids.filter(function (id) { return id !== "count"; }).forEach(function (id) {
+        el[id].addEventListener(id === "groupsize" ? "change" : "input", function () {
+            updateLabels(); updateStats(); updateGroups(); updateShader();
+        });
+    });
+    document.getElementById("pause").addEventListener("click", function () {
+        paused = !paused;
+        this.textContent = paused ? "Resume" : "Pause";
+        showMessage(paused ? "Paused. Click Step once to advance." : "Simulation running.");
+    });
+    document.getElementById("step").addEventListener("click", function () {
+        paused = true;
+        document.getElementById("pause").textContent = "Resume";
+        simulate(); updateStats(); showMessage("Advanced exactly one fixed simulation step.");
+    });
+    document.getElementById("reset").addEventListener("click", function () {
+        reset(); updateShader(); showMessage("Reset to deterministic initial positions.");
+    });
+    document.getElementById("copy").addEventListener("click", function () {
+        const text = shaderText();
+        const message = function (s) { showMessage(s); };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(function () { message("HLSL source copied."); }, function () { message("Clipboard permission denied. Select and copy the code manually."); });
+        } else {
+            const tmp = document.createElement("textarea");
+            tmp.value = text; document.body.appendChild(tmp); tmp.select();
+            const ok = document.execCommand("copy");
+            tmp.remove();
+            message(ok ? "HLSL source copied." : "Select and copy the code manually.");
+        }
+    });
+    document.getElementById("download").addEventListener("click", function () {
+        const blob = new Blob([shaderText()], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url; link.download = "particle-step.hlsl";
+        document.body.appendChild(link); link.click(); link.remove();
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        showMessage("HLSL source saved. Compile it separately with DXC.");
+    });
+    reset();
+    updateShader();
+    requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
