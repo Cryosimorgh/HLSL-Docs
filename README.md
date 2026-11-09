@@ -8,24 +8,19 @@ Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, an
 
 > Independent learning resource; **not official Microsoft documentation**. Focus: modern Direct3D 12 + DXC + SM6.x. Differences for D3D11/FXC and newer hardware features are explicitly marked. Last reviewed: **9 November 2026**.
 
-## Windows security advisory — native runner temporarily on hold
+## Run the HLSL compute client on Windows (v1.5.0)
 
-A user reported that Windows Defender blocked the bundled `hlsl-server.exe` as potentially malicious/unwanted software, followed by an `illegal action` error when attempting to run it. **The executable has not been established to be safe. Do not bypass Defender or allowlist it.** Source-checkout auto-download of the previously flagged executable is paused pending security analysis.
+**[Download the Windows HLSL client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.5.0.zip)** · [Release notes, checksum and compiler tools](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.5.0)
 
-A separate compatibility issue was found: Zig 0.13 binaries were compiled using the GitHub runner's CPU defaults. Zig's own documentation states this can generate instructions unavailable on older computers. Build/test configuration now requests `-mcpu baseline`, but this has not resolved the Defender classification and no new Windows binary should be treated as vetted on that basis.
+Extract the ZIP, double-click **Start-HLSL-Playground.cmd**, and use the new localhost browser tab. Click **Array example**, edit the HLSL code, then **Compile & Run HLSL**. The resulting buffer values are shown underneath. No Node, Zig or Rust installation is required.
 
-For now, open [the browser-only tutorial](playground/index.html) from a fresh source checkout. It provides the **offline JavaScript particle simulation** and a **real, editable WGSL WebGPU compute lab** that needs no server or native binaries. The WGSL lab does not compile HLSL; native HLSL execution remains disabled. See [security/compatibility issue #1](https://github.com/Cryosimorgh/HLSL-Docs/issues/1). To help investigate, provide the Defender **Protection history** threat name and, if the program crashed, Windows **Application Error** event 1000 exception code.
+The client uses Windows PowerShell/.NET as an auditable **localhost compiler host**, Microsoft DXC to compile HLSL to SPIR-V, prebuilt Naga to generate WGSL, and browser WebGPU to execute compatible compute shaders. The local host stops after the final tab disconnects.
 
-## Browser-only GPU tutorial (current recommended path)
+A source checkout also works: its updated launcher downloads only the compiler tools from the versioned GitHub release, validates their SHA-256, and caches them privately. It never launches the older Zig `hlsl-server.exe`.
 
-**[Download the clean browser-only v1.4.0 ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.4.0/HLSL-Playground-Browser-v1.4.0.zip)** · [Release notes and SHA-256](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.4.0)
+**Compatibility boundaries:** This is a supported buffer-oriented **compute-shader** host, not a universal HLSL/Direct3D execution environment. WebGPU support depends on the browser and GPU. The old Zig binary was quarantined and crashed on one Windows machine; this release removes that custom executable rather than requiring antivirus exclusions.
 
-1. Download and extract the [v1.4.0 browser-only ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.4.0/HLSL-Playground-Browser-v1.4.0.zip), which contains no native executables.
-2. Open `playground/index.html` in a WebGPU-compatible browser.
-3. Edit the **WGSL** compute shader, change input numbers and click **Run WGSL on GPU**. This does not execute a local process or compile HLSL.
-4. Explore the independent JavaScript particle simulator and the HLSL reference panel.
-
-**Do not run old portable Windows releases while the Defender Trojan investigation is unresolved.** The current native launcher intentionally blocks execution. Old release downloads remain historical archives, not recommended binaries. See [issue #1](https://github.com/Cryosimorgh/HLSL-Docs/issues/1) and the [updated playground instructions](playground/README.md).
+For a **completely browser-only tutorial** without a local host, use the independent [editable WGSL WebGPU exercise](playground/index.html) or [browser-only v1.4.0 ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.4.0). This runs WGSL, not HLSL.
 
 ## Learn interactively and use the Agent Skill
 
