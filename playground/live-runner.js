@@ -175,7 +175,7 @@ function compiledSize(wgsl) {
   return [Number(m[1]),Number(m[2]||1),Number(m[3]||1)];
 }
 async function run(){
-  if(!isBridgeOrigin)throw Error("Start the local compiler: node playground/server.mjs, then open http://127.0.0.1:4173/");
+  if(!isBridgeOrigin)throw Error("Run Start-HLSL-Playground.cmd from the Windows portable release (Zig backend), then open the URL it launches.");
   if(!navigator.gpu)throw Error("No WebGPU support. Use a compatible Chromium/Edge browser and GPU.");
   const spec=parseManifest(),source=editor.value;
   if(!source||source.length>65536)throw Error("HLSL source must be 1-65536 characters.");
