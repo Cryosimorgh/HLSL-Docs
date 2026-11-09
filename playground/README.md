@@ -1,5 +1,19 @@
 # Interactive HLSL Compute Shader Playground
 
+## Current safe way to run GPU code
+
+**Native Windows HLSL execution is temporarily disabled.** The older Zig server executable was quarantined by Defender as `Trojan:Win32/Sabsik.TE.A!ml` and reported a `0xC0000005` access violation. Do not restore, allowlist, or run previous binary releases. See [security issue #1](https://github.com/Cryosimorgh/HLSL-Docs/issues/1).
+
+The tutorial now includes an **independent, editable WGSL compute lab** that needs no native executable or local server. Open `playground/index.html` in a browser with WebGPU support and use **Run WGSL on GPU**. Change the shader's multiplier or input array, then inspect the GPU-computed output. This runs *WGSL*, WebGPU's shading language, **not HLSL**. You can still edit, copy and save HLSL in the separate panel, but compiling/running it is on hold pending security review. Offline JavaScript particle animation works even without WebGPU.
+
+For direct GPU execution, WebGPU must be available in the browser context; if the file URL doesn't expose it, host the files with a trusted static HTTPS server. Do not use the quarantined Zig executable to serve the page.
+
+### Security and compatibility fix underway
+
+The Zig backend source no longer terminates its process from detached request threads. Its idle monitor signals the main thread and wakes the socket to permit orderly shutdown. CI now checks clean exit codes and parallel localhost clients on Windows and Linux. This addresses a **plausible crash mechanism**, but does **not** prove the user's access violation is resolved or change the Defender classification. Native binaries remain on hold until independent review.
+
+
+
 **[Open the tutorial source](index.html)** · **[View the real compute shader](particle-step.hlsl)** · **[HLSL Handbook](../README.md)**
 
 The offline mode is a small, dependency-free tutorial for learning what **HLSL compute shaders** do. It makes parameters and dispatch sizes visible before you build a full Direct3D 12 host application.
