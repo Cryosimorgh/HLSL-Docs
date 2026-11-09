@@ -9,7 +9,7 @@ const maxBytes = 4*1024*1024, maxTotal = 8*1024*1024, maxGroups = 1024;
 const isBridgeOrigin = /^http:\/\/127\.0\.0\.1:\d+$/.test(location.origin);
 
 // The browser is intentionally unable to launch or kill OS processes.
-// It owns a lease in the loopback-only Node server started by the launcher.
+// It owns a lease in the loopback-only Zig server started by the launcher.
 // Closing the tab sends a best-effort release; heartbeat expiration handles
 // forced browser exits / lost pagehide events.
 let leaseToken = null, leaseClosed = false, heartbeatTimer = null;
@@ -175,7 +175,7 @@ function compiledSize(wgsl) {
   return [Number(m[1]),Number(m[2]||1),Number(m[3]||1)];
 }
 async function run(){
-  if(!isBridgeOrigin)throw Error("Run Start-HLSL-Playground.cmd from the Windows portable release (Zig backend), then open the URL it launches.");
+  if(!isBridgeOrigin)throw Error("This tab is offline or outdated. Double-click Start-HLSL-Playground.cmd from the current checkout or Windows portable release, then use the NEW localhost tab it opens. It will fetch Zig/DXC/Naga automatically if needed.");
   if(!navigator.gpu)throw Error("No WebGPU support. Use a compatible Chromium/Edge browser and GPU.");
   const spec=parseManifest(),source=editor.value;
   if(!source||source.length>65536)throw Error("HLSL source must be 1-65536 characters.");
