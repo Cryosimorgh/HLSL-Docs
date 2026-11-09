@@ -1,8 +1,8 @@
-HLSL Playground v1.5.0 — one-click Windows client
+HLSL Playground v1.5.1 — one-click Windows client
 
 HOW TO RUN
-1. Download HLSL-Playground-Windows-v1.5.0.zip from
-   https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.5.0
+1. Download HLSL-Playground-Windows-v1.5.1.zip from
+   https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.5.1
 2. Extract the entire ZIP to a new folder.
 3. Double-click Start-HLSL-Playground.cmd.
 4. The launcher starts a localhost server using the Windows PowerShell/.NET
