@@ -18,7 +18,7 @@ try{
   const html=await readFile(join(here,"index.html"),"utf8");
   const live=await readFile(join(here,"live-runner.js"),"utf8");
   new vm.Script(live,{filename:"live-runner.js"});
-  const inline=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];
+  const inline=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].filter(m=>!m[0].includes("src="));
   assert.equal(inline.length,2,"Expected HLSL source + JavaScript app scripts");
   new vm.Script(inline[1][1],{filename:"index-inline.js"});
   assert.match(html,/id="code" class="code-editor"/);
