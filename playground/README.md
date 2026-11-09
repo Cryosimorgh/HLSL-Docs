@@ -1,6 +1,6 @@
 # Interactive HLSL Compute Playground
 
-**[Download the Windows v1.5.0 client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.5.0.zip)** · [Handbook](../README.md) · [Compute shader source](particle-step.hlsl)
+**[Download the Windows v1.5.0 client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.5.1.zip)** · [Handbook](../README.md) · [Compute shader source](particle-step.hlsl)
 
 ## Run real HLSL on Windows
 
@@ -63,4 +63,4 @@ Opening `playground/index.html` directly without the launcher provides the JavaS
 
 The repository's Windows CI runs `node playground/test-powershell.mjs` **only as a test client**, including real DXC/Naga compilation through the PowerShell HTTP API. Users do not need Node.
 
-[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.5.0.md)
+[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.5.1.md)
