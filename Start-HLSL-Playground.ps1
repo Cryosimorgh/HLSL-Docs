@@ -84,7 +84,7 @@ function Get-PortableRuntime {
 # Full release ZIP: use bundled tools. Source checkout: fetch the portable
 # runtime once, including the compiled Zig server and matching DXC/Naga.
 if (-not (Test-CompleteRuntime $Root)) {
-    $Root = Get-PortableRuntime
+    throw "Automatic download of prior native runtimes is paused because Windows Security has flagged hlsl-server.exe. Do not disable antivirus or add an exclusion. Use playground/index.html for the offline JavaScript tutorial; see https://github.com/Cryosimorgh/HLSL-Docs/issues/1 for investigation status."
 }
 $ServerScript = Join-Path $Root 'playground\hlsl-server.exe'
 $Dxc = Join-Path $Root 'tools\dxc\dxc.exe'
