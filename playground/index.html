@@ -49,10 +49,22 @@ a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem)
 <div id="groups" aria-label="Workgroup occupancy visualization"></div>
 </section>
 </div>
+<section class="panel" aria-label="Browser-only real GPU tutorial">
+<h2>4. Real GPU lab — no native executable <span class="pill">WGSL · WebGPU</span></h2>
+<p class="muted">The previous native HLSL compiler executable is <strong>under security review</strong> following a severe Defender Trojan detection and a Windows access-violation crash. Do not restore or run that executable. This independent exercise uses <strong>WGSL</strong>, WebGPU's shading language, directly in your browser. It executes real GPU compute where WebGPU is supported, but it <strong>does not compile HLSL</strong>.</p>
+<p>Change <code>* 2.0</code> to <code>* 3.0</code>, or edit the input numbers. Compare the result against your prediction.</p>
+<label for="wgsl-code"><strong>Editable WGSL compute shader</strong></label>
+<textarea id="wgsl-code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable WGSL shader source"></textarea>
+<label for="wgsl-input"><strong>Input float array (JSON)</strong></label>
+<textarea id="wgsl-input" class="code-editor" rows="2" spellcheck="false" aria-label="Input values JSON" style="height:72px;min-height:72px;"></textarea>
+<div class="buttons"><button id="wgsl-run" class="primary" type="button">Run WGSL on GPU</button><button id="wgsl-reset" type="button">Reset WGSL example</button></div>
+<pre id="wgsl-output" class="result-panel" aria-label="WGSL GPU output" role="status" aria-live="polite">Edit the shader and click Run WGSL. No local compiler needed.</pre>
+<p class="hint">Uses your browser's WebGPU implementation. GPU support and secure-context requirements vary by browser. The shader may run from a local HTML file in supported browsers. If WebGPU is unavailable, the offline JavaScript particle animation above remains usable.</p>
+</section>
 <div class="below">
 <section class="panel code-panel">
-<h2>4. Edit &amp; run HLSL <span class="pill">DXC · WebGPU</span></h2>
-<p class="muted">Edit the HLSL shader below. You can run supported compute shaders on a real GPU using the local DXC + Naga compiler bridge; the offline visualization above remains a JavaScript model.</p>
+<h2>5. Edit HLSL source <span class="pill">Native compiler temporarily disabled</span></h2>
+<p class="muted">Edit HLSL syntax, save it and inspect buffer bindings. The native HLSL compiler endpoint is disabled pending the <a href="https://github.com/Cryosimorgh/HLSL-Docs/issues/1">security investigation</a>. Use the browser-only WGSL exercise above for real GPU compute in the meantime.</p>
 <div class="buttons"><button id="copy" type="button">Copy code</button><button id="download" type="button">Save .hlsl</button><button id="restore-example" type="button">Reset example</button><button id="example-scale" type="button">Array example</button></div>
 <label class="sr-only" for="code">Editable HLSL compute shader source</label>
 <textarea id="code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable HLSL compute shader source"></textarea>
@@ -61,14 +73,14 @@ a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem)
 <label class="sr-only" for="bindings">JSON buffer layout and dispatch</label>
 <textarea id="bindings" spellcheck="false" aria-label="JSON buffer layout and dispatch"></textarea>
 </details>
-<div class="buttons"><button id="run-gpu" class="primary" type="button">Run on GPU</button><label class="hint check-wgsl"><input type="checkbox" id="show-wgsl"> Show generated WGSL</label></div>
+<div class="buttons"><button id="run-gpu" class="primary" type="button" disabled>Run HLSL (security hold)</button><label class="hint check-wgsl"><input type="checkbox" id="show-wgsl"> Show generated WGSL</label></div>
 <p class="notice" id="compile-status" role="status" aria-live="polite"></p>
 <pre id="gpu-output" class="result-panel" aria-label="Compute shader output and errors">Output appears here after a GPU run.</pre>
 <pre id="wgsl-output" class="result-panel" aria-label="Translated WGSL source" hidden></pre>
 <p class="hint"><strong>To run real HLSL compute:</strong> Double-click <code>Start-HLSL-Playground.cmd</code> from either the Windows portable ZIP or a source checkout. The source launcher automatically obtains the verified Zig/DXC/Naga runtime when binaries are missing. Use the fresh localhost tab it opens, not an old offline file. <a href="README.md">Setup guide</a>. <strong>Not all HLSL runs:</strong> this host supports compatible compute buffers, not arbitrary graphics, ray tracing or all D3D12 intrinsics.</p>
 </section>
 <section class="panel steps">
-<h2>5. Try three experiments</h2>
+<h2>6. Try three experiments</h2>
 <div class="step"><strong>What changes with restitution?</strong><p>Set restitution to <strong>1.00</strong> and watch near-elastic wall bounces; then set <strong>0.00</strong> to make velocity along the impact normal vanish at contact. Drag remains a separate energy loss.</p></div>
 <div class="step"><strong>Why are some lanes idle?</strong><p>Set particle count to <strong>65</strong>, group size to <strong>64</strong>. You need 2 groups = 128 dispatched lanes, but only 65 are active. The remaining <strong>63</strong> must exit at the bounds check.</p></div>
 <div class="step"><strong>What does the timestep do?</strong><p>Compare <strong>4 ms</strong> and <strong>40 ms</strong> at the same gravity. The kernel uses an explicit fixed-step integrator. Larger steps can overshoot walls more and may be less accurate.</p></div>
@@ -423,5 +435,6 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
 })();
 </script>
 <script src="live-runner.js" defer></script>
+<script src="browser-gpu.js" defer></script>
 </body>
 </html>
