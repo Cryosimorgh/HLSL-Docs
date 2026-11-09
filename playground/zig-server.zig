@@ -158,6 +158,50 @@ fn sessionEndpoint(req: *Request, action: []const u8) void {
     if (!known) { failure(req, .not_found, "Unknown or expired session."); return; }
     jsonResponse(req, .ok, .{ .ok = true, .activeTabs = count });
 }
+// Ensure an invalid/untrusted shader cannot keep the service occupied forever.
+// The watchdog terminates only its own DXC/Naga child after 15 seconds.
+fn childWatch(child: *std.process.Child, finished: *std.atomic.Value(bool)) void {
+    var ticks: usize = 0;
+    while (ticks < 60) : (ticks += 1) {
+        if (finished.load(.acquire)) return;
+        std.time.sleep(250 * std.time.ns_per_ms);
+    }
+    if (!finished.load(.acquire)) {
+        _ = child.kill() catch {};
+    }
+}
+fn cappedRun(argv: []const []const u8) !std.process.Child.RunResult {
+    var child = std.process.Child.init(argv, A);
+    child.stdin_behavior = .Ignore;
+    child.stdout_behavior = .Pipe;
+    child.stderr_behavior = .Pipe;
+    try child.spawn();
+    var finished = std.atomic.Value(bool).init(false);
+    var watcher = try std.Thread.spawn(.{}, childWatch, .{ &child, &finished });
+    var out = std.ArrayList(u8).init(A);
+    var err = std.ArrayList(u8).init(A);
+    defer {
+        finished.store(true, .release);
+        watcher.join();
+    }
+    errdefer out.deinit();
+    errdefer err.deinit();
+    child.collectOutput(&out, &err, max_output) catch |e| {
+        finished.store(true, .release);
+        watcher.join();
+        _ = child.kill() catch {};
+        return e;
+    };
+    // Join before reading/waiting on child state because watchdog may have
+    // already killed/reaped the child when the timeout was reached.
+    finished.store(true, .release);
+    watcher.join();
+    return .{
+        .term = try child.wait(),
+        .stdout = try out.toOwnedSlice(),
+        .stderr = try err.toOwnedSlice(),
+    };
+}
 fn childSucceeded(result: std.process.Child.RunResult) bool {
     return switch (result.term) { .Exited => |code| code == 0, else => false };
 }
@@ -232,7 +276,7 @@ fn compileHlsl(req: *Request) void {
         "-fvk-t-shift", "0", "0", "-fvk-u-shift", "16", "0",
         "-fvk-b-shift", "32", "0", "-fvk-s-shift", "48", "0", input,
     };
-    const dxc = std.process.Child.run(.{ .allocator = A, .argv = &dxc_args, .max_output_bytes = max_output }) catch |err| {
+    const dxc = cappedRun(&dxc_args) catch |err| {
         const diagnostic = std.fmt.allocPrint(A, "DXC could not run: {s}", .{@errorName(err)}) catch "DXC failed.";
         failure(req, .bad_request, diagnostic); return;
     };
@@ -243,7 +287,7 @@ fn compileHlsl(req: *Request) void {
     }
 
     const naga_args = [_][]const u8{ naga_path, spirv, wgsl };
-    const naga = std.process.Child.run(.{ .allocator = A, .argv = &naga_args, .max_output_bytes = max_output }) catch |err| {
+    const naga = cappedRun(&naga_args) catch |err| {
         const diagnostic = std.fmt.allocPrint(A, "Naga could not run: {s}", .{@errorName(err)}) catch "Naga failed.";
         failure(req, .bad_request, diagnostic); return;
     };
