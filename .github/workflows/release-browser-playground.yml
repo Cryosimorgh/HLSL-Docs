@@ -1,0 +1,59 @@
+name: Publish browser-only HLSL/WGSL learning lab v1.4.0
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release-browser-playground.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  safe-static-browser-release:
+    if: github.repository == 'Cryosimorgh/HLSL-Docs'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test browser JavaScript without native executable
+        run: node playground/test-frontend.mjs
+      - name: Assemble static, non-executable tutorial
+        shell: bash
+        run: |
+          set -euo pipefail
+          root=release/HLSL-Playground-Browser-v1.4.0
+          mkdir -p "$root/playground"
+          cp playground/index.html playground/live-runner.js playground/browser-gpu.js playground/particle-step.hlsl playground/README.md "$root/playground/"
+          cp README.md HLSL-Handbook.md RELEASE_NOTES_v1.4.0.md LICENSE "$root/"
+          cp -R docs "$root/docs"
+          if find "$root" -type f \( -iname '*.exe' -o -iname '*.dll' -o -iname '*.bat' -o -iname '*.cmd' -o -iname '*.ps1' -o -iname '*.so' -o -iname '*.dylib' -o -iname '*.wasm' \) | grep -q .; then
+            echo 'ERROR: Browser-only release contains a prohibited native or executable asset.' >&2
+            exit 1
+          fi
+          test -s "$root/playground/browser-gpu.js"
+          test -s "$root/playground/index.html"
+          grep -q 'id="wgsl-run"' "$root/playground/index.html"
+          grep -q 'id="run-gpu".*disabled' "$root/playground/index.html"
+          (cd release && zip -qr HLSL-Playground-Browser-v1.4.0.zip HLSL-Playground-Browser-v1.4.0)
+          unzip -tq release/HLSL-Playground-Browser-v1.4.0.zip
+          sha256sum release/HLSL-Playground-Browser-v1.4.0.zip | tee release/SHA256SUMS.txt
+      - name: Publish versioned source-only release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view v1.4.0 >/dev/null 2>&1; then
+            echo 'Release already exists; refusing to overwrite.'
+            exit 0
+          fi
+          gh release create v1.4.0 \
+            release/HLSL-Playground-Browser-v1.4.0.zip \
+            release/SHA256SUMS.txt \
+            --target "$GITHUB_SHA" \
+            --title "HLSL Handbook v1.4.0 — Browser-only WGSL GPU Lab" \
+            --notes-file RELEASE_NOTES_v1.4.0.md
