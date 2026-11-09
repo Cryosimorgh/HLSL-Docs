@@ -32,6 +32,8 @@ $static = @{
   '/index.html' = @('index.html', 'text/html; charset=utf-8')
   '/live-runner.js' = @('live-runner.js', 'application/javascript; charset=utf-8')
   '/browser-gpu.js' = @('browser-gpu.js', 'application/javascript; charset=utf-8')
+  '/gpu-visualizer.js' = @('gpu-visualizer.js', 'application/javascript; charset=utf-8')
+  '/circle-mask.hlsl' = @('circle-mask.hlsl', 'text/plain; charset=utf-8')
   '/particle-step.hlsl' = @('particle-step.hlsl', 'text/plain; charset=utf-8')
   '/README.md' = @('README.md', 'text/plain; charset=utf-8')
 }
