@@ -1,0 +1,50 @@
+name: HLSL playground — editor and compiler smoke tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'playground/**'
+      - '.github/workflows/hlsl-live-runner.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  browser-editor-and-compile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test HTML/JavaScript, routes and compiler wiring
+        run: node playground/test.mjs
+      - name: Fetch known DXC release with SPIR-V backend
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/dxc"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/dxc.tar.gz" \
+            'https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.9.2609/linux_dxc_2026_09_28.x86_x64.tar.gz'
+          tar xzf "$RUNNER_TEMP/dxc.tar.gz" -C "$RUNNER_TEMP/dxc"
+          echo "$RUNNER_TEMP/dxc/bin" >> "$GITHUB_PATH"
+      - name: Install Naga shader translator
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo install naga-cli --locked
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+      - name: Validate genuine DXC SPIR-V → Naga WGSL translation
+        shell: bash
+        run: |
+          set -euo pipefail
+          dxc -spirv -fspv-target-env=vulkan1.1 -T cs_6_0 -E CSMain \
+            -fvk-t-shift 0 0 -fvk-u-shift 16 0 -fvk-b-shift 32 0 -fvk-s-shift 48 0 \
+            -Fo "$RUNNER_TEMP/particle.spv" playground/particle-step.hlsl
+          naga "$RUNNER_TEMP/particle.spv" "$RUNNER_TEMP/particle.wgsl"
+          test -s "$RUNNER_TEMP/particle.wgsl"
+          grep -q '@compute' "$RUNNER_TEMP/particle.wgsl"
+          echo 'PASS: real HLSL source compiled and translated'
