@@ -59,3 +59,46 @@ jobs:
           $env:HLSL_TEST_NAGA = Join-Path $env:RUNNER_TEMP 'prebuilt-naga.exe'
           node playground/test-powershell.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Real compiler HTTP integration failed' }
+
+      - name: Verify clean source checkout downloads only compiler tools and runs HLSL
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $env:HLSL_BOOTSTRAP_CACHE = Join-Path $env:RUNNER_TEMP ('source-tools-' + [guid]::NewGuid().ToString('N'))
+          try {
+            if (Test-Path 'tools\dxc\dxc.exe') { throw 'Test expects no compiler binaries in source checkout' }
+            & ./Start-HLSL-Playground.ps1 -NoBrowser
+            $toolRoot = Join-Path $env:HLSL_BOOTSTRAP_CACHE 'v1.5.0'
+            if (-not (Test-Path (Join-Path $toolRoot 'tools\dxc\dxc.exe'))) { throw 'DXC bootstrap failed' }
+            if (-not (Test-Path (Join-Path $toolRoot 'tools\naga\naga.exe'))) { throw 'Naga bootstrap failed' }
+            $ready=Get-ChildItem -LiteralPath $env:TEMP -Directory -Filter 'hlsl-playground-run-*' |
+              Sort-Object LastWriteTime -Descending |
+              ForEach-Object { Join-Path $_.FullName 'ready.json' } |
+              Where-Object { Test-Path $_ } | Select-Object -First 1
+            if (-not $ready) { throw 'No ready file from checkout launch' }
+            $info=Get-Content -LiteralPath $ready -Raw | ConvertFrom-Json
+            $health=Invoke-RestMethod -Uri "$($info.url)/api/health"
+            if ($health.backend -ne 'powershell-dotnet') { throw 'Incorrect compiler backend' }
+            $session=Invoke-RestMethod -Uri "$($info.url)/api/session/open" -Method POST -ContentType 'application/json' -Body '{}'
+            try {
+              $hlsl=Get-Content -LiteralPath 'playground/particle-step.hlsl' -Raw
+              $payload=@{entry='CSMain';source=$hlsl} | ConvertTo-Json -Compress
+              $output=Invoke-RestMethod -Uri "$($info.url)/api/compile" -Method POST -ContentType 'application/json' -Body $payload
+              if ($output.wgsl -notmatch '@compute') { throw 'Source checkout compiler produced no WGSL' }
+            } finally {
+              $closed=@{token=$session.token} | ConvertTo-Json -Compress
+              Invoke-RestMethod -Uri "$($info.url)/api/session/close" -Method POST -ContentType 'application/json' -Body $closed | Out-Null
+            }
+            $exited=$false
+            for($i=0;$i -lt 40;$i++){
+              Start-Sleep -Milliseconds 250
+              if(-not (Get-Process -Id $info.pid -ErrorAction SilentlyContinue)) { $exited=$true; break }
+            }
+            if(-not $exited) {
+              Stop-Process -Id $info.pid -Force -ErrorAction SilentlyContinue
+              throw 'Checkout compiler process did not shut down'
+            }
+            Write-Host 'PASS: fresh checkout auto-download, SHA256 verification, HLSL compile and tab cleanup'
+          } finally {
+            Remove-Item Env:\HLSL_BOOTSTRAP_CACHE -ErrorAction SilentlyContinue
+          }
