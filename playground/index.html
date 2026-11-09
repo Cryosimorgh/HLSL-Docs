@@ -51,7 +51,7 @@ a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem)
 </div>
 <section class="panel" aria-label="Browser-only real GPU tutorial">
 <h2>4. Real GPU lab — no native executable <span class="pill">WGSL · WebGPU</span></h2>
-<p class="muted">The previous native HLSL compiler executable is <strong>under security review</strong> following a severe Defender Trojan detection and a Windows access-violation crash. Do not restore or run that executable. This independent exercise uses <strong>WGSL</strong>, WebGPU's shading language, directly in your browser. It executes real GPU compute where WebGPU is supported, but it <strong>does not compile HLSL</strong>.</p>
+<p class="muted">The older custom Zig executable is not used by this version. This independent exercise uses <strong>WGSL</strong>, WebGPU's shading language, directly in your browser. It executes real GPU compute where WebGPU is supported, but it <strong>does not compile HLSL</strong>.</p>
 <p>Change <code>* 2.0</code> to <code>* 3.0</code>, or edit the input numbers. Compare the result against your prediction.</p>
 <label for="wgsl-code"><strong>Editable WGSL compute shader</strong></label>
 <textarea id="wgsl-code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable WGSL shader source"></textarea>
@@ -63,8 +63,8 @@ a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem)
 </section>
 <div class="below">
 <section class="panel code-panel">
-<h2>5. Edit HLSL source <span class="pill">Native compiler temporarily disabled</span></h2>
-<p class="muted">Edit HLSL syntax, save it and inspect buffer bindings. The native HLSL compiler endpoint is disabled pending the <a href="https://github.com/Cryosimorgh/HLSL-Docs/issues/1">security investigation</a>. Use the browser-only WGSL exercise above for real GPU compute in the meantime.</p>
+<h2>5. Edit and run HLSL <span class="pill">DXC · Naga · WebGPU</span></h2>
+<p class="muted">Write HLSL compute code, set buffer bindings and workgroups, and run it on your GPU through the local PowerShell/.NET compiler host. This host uses DXC and Naga without launching the previously blocked Zig server executable.</p>
 <div class="buttons"><button id="copy" type="button">Copy code</button><button id="download" type="button">Save .hlsl</button><button id="restore-example" type="button">Reset example</button><button id="example-scale" type="button">Array example</button></div>
 <label class="sr-only" for="code">Editable HLSL compute shader source</label>
 <textarea id="code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable HLSL compute shader source"></textarea>
@@ -73,11 +73,11 @@ a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem)
 <label class="sr-only" for="bindings">JSON buffer layout and dispatch</label>
 <textarea id="bindings" spellcheck="false" aria-label="JSON buffer layout and dispatch"></textarea>
 </details>
-<div class="buttons"><button id="run-gpu" class="primary" type="button" disabled>Run HLSL (security hold)</button><label class="hint check-wgsl"><input type="checkbox" id="show-wgsl"> Show generated WGSL</label></div>
+<div class="buttons"><button id="run-gpu" class="primary" type="button">Compile &amp; Run HLSL</button><label class="hint check-wgsl"><input type="checkbox" id="show-wgsl"> Show generated WGSL</label></div>
 <p class="notice" id="compile-status" role="status" aria-live="polite"></p>
 <pre id="gpu-output" class="result-panel" aria-label="Compute shader output and errors">Output appears here after a GPU run.</pre>
 <pre id="wgsl-output" class="result-panel" aria-label="Translated WGSL source" hidden></pre>
-<p class="hint"><strong>To run real HLSL compute:</strong> Double-click <code>Start-HLSL-Playground.cmd</code> from either the Windows portable ZIP or a source checkout. The source launcher automatically obtains the verified Zig/DXC/Naga runtime when binaries are missing. Use the fresh localhost tab it opens, not an old offline file. <a href="README.md">Setup guide</a>. <strong>Not all HLSL runs:</strong> this host supports compatible compute buffers, not arbitrary graphics, ray tracing or all D3D12 intrinsics.</p>
+<p class="hint"><strong>To run real HLSL compute:</strong> Double-click <code>Start-HLSL-Playground.cmd</code> in the new Windows package. It starts a PowerShell/.NET localhost host and uses included DXC + Naga compiler tools. Use the new localhost tab; opening the HTML directly is for offline learning only. <a href="README.md">Setup guide</a>. <strong>Not all HLSL runs:</strong> this host supports compatible compute buffers, not arbitrary graphics, ray tracing or all D3D12 intrinsics.</p>
 </section>
 <section class="panel steps">
 <h2>6. Try three experiments</h2>
