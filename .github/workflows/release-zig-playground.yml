@@ -1,4 +1,4 @@
-name: Release HLSL Playground v1.3.0 — Zig backend, no Rust/Node install
+name: Release HLSL Playground v1.3.1 — Zig backend, no Rust/Node install
 
 on:
   push:
@@ -81,8 +81,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $out = Join-Path $env:RUNNER_TEMP 'release-assets'
-          $portable = Join-Path $out 'HLSL-Playground-Windows-v1.3.0'
-          $source = Join-Path $out 'HLSL-Playground-Source-v1.3.0'
+          $portable = Join-Path $out 'HLSL-Playground-Windows-v1.3.1'
+          $source = Join-Path $out 'HLSL-Playground-Source-v1.3.1'
           foreach ($folder in @($portable, $source)) {
             New-Item -ItemType Directory -Path $folder -Force | Out-Null
             foreach ($name in @('playground','.agents','docs')) {
@@ -90,7 +90,7 @@ jobs:
             }
             foreach ($name in @('Start-HLSL-Playground.cmd','Start-HLSL-Playground.ps1',
                 'README-WINDOWS.txt','README.md','HLSL-Handbook.md','LICENSE',
-                'THIRD_PARTY_NOTICES.md','RELEASE_NOTES_v1.3.0.md')) {
+                'THIRD_PARTY_NOTICES.md','RELEASE_NOTES_v1.3.1.md')) {
               Copy-Item -LiteralPath $name -Destination $folder
             }
           }
@@ -149,8 +149,8 @@ jobs:
             throw 'Bundled Zig service remained alive after final tab closed'
           }
           Remove-Item -LiteralPath $runtimeDir -Recurse -Force
-          $portableZip = Join-Path $out 'HLSL-Playground-Windows-v1.3.0.zip'
-          $sourceZip = Join-Path $out 'HLSL-Playground-Source-v1.3.0.zip'
+          $portableZip = Join-Path $out 'HLSL-Playground-Windows-v1.3.1.zip'
+          $sourceZip = Join-Path $out 'HLSL-Playground-Source-v1.3.1.zip'
           Remove-Item -LiteralPath (Join-Path $source 'playground\hlsl-server.exe') -ErrorAction SilentlyContinue
           Compress-Archive -LiteralPath $portable -DestinationPath $portableZip -CompressionLevel Optimal
           Compress-Archive -LiteralPath $source -DestinationPath $sourceZip -CompressionLevel Optimal
@@ -161,8 +161,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          gh release view v1.3.0 *> $null
-          if ($LASTEXITCODE -eq 0) { throw 'v1.3.0 already exists: refusing to overwrite.' }
+          gh release view v1.3.1 *> $null
+          if ($LASTEXITCODE -eq 0) { throw 'v1.3.1 already exists: refusing to overwrite.' }
           $dir = Join-Path $env:RUNNER_TEMP 'release-assets'
-          gh release create v1.3.0 (Join-Path $dir 'HLSL-Playground-Windows-v1.3.0.zip') (Join-Path $dir 'HLSL-Playground-Source-v1.3.0.zip') --target $env:GITHUB_SHA --title 'HLSL Playground v1.3.0 — Zig backend, zero Rust or Node setup' --notes-file RELEASE_NOTES_v1.3.0.md
+          gh release create v1.3.1 (Join-Path $dir 'HLSL-Playground-Windows-v1.3.1.zip') (Join-Path $dir 'HLSL-Playground-Source-v1.3.1.zip') --target $env:GITHUB_SHA --title 'HLSL Playground v1.3.1 — Zig backend, zero Rust or Node setup' --notes-file RELEASE_NOTES_v1.3.1.md
           if ($LASTEXITCODE -ne 0) { throw 'GitHub release creation failed' }
