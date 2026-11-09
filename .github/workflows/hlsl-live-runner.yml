@@ -23,6 +23,8 @@ jobs:
       - name: Test HTML/JavaScript, routes and compiler wiring
         run: node playground/test.mjs
       - name: Fetch known DXC release with SPIR-V backend
+        id: dxc-download
+        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -32,12 +34,14 @@ jobs:
           tar xzf "$RUNNER_TEMP/dxc.tar.gz" -C "$RUNNER_TEMP/dxc"
           echo "$RUNNER_TEMP/dxc/bin" >> "$GITHUB_PATH"
       - name: Install Naga shader translator
+        if: steps.dxc-download.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
           cargo install naga-cli --locked
           echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
       - name: Validate genuine DXC SPIR-V → Naga WGSL translation
+        if: steps.dxc-download.outcome == 'success'
         shell: bash
         run: |
           set -euo pipefail
@@ -48,3 +52,9 @@ jobs:
           test -s "$RUNNER_TEMP/particle.wgsl"
           grep -q '@compute' "$RUNNER_TEMP/particle.wgsl"
           echo 'PASS: real HLSL source compiled and translated'
+      - name: Report optional DXC download limitation
+        if: steps.dxc-download.outcome != 'success'
+        shell: bash
+        run: |
+          echo '::warning::DXC release download unavailable. Editor/server tests passed, but real HLSL translation is NOT verified.'
+          echo 'DXC download failed; no real conversion claim.' >> "$GITHUB_STEP_SUMMARY"
