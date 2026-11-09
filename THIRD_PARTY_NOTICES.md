@@ -1,20 +1,15 @@
-# Third-party tools in the optional Windows portable package
+# Third-party tools — HLSL Playground Windows v1.5.0
 
-The source-only HLSL Handbook and skill use this repository's MIT License.
-The **Windows portable release** additionally bundles independently developed
-compiler and runtime executables. They are not authored by this repository.
+The HLSL Handbook and PowerShell/.NET HTTP bridge source are distributed under this repository's MIT License. The Windows portable client additionally includes external compiler binaries. Those remain owned and licensed by their respective upstream authors.
 
-| Binary | Upstream | Version chosen for portable build | License |
-|---|---|---|---|
-| hlsl-server.exe (Zig source in playground/zig-server.zig) | https://ziglang.org | Built using Zig 0.13.0; compiler not bundled | Local application source under repository MIT License |
-| dxc.exe, dxcompiler.dll (and associated runtime DLLs) | https://github.com/microsoft/DirectXShaderCompiler | v1.9.2609 | See upstream DXC license and redistribution notices |
-| naga.exe | https://github.com/gfx-rs/wgpu/tree/trunk/naga-cli | naga-cli 30.0.1 | MIT OR Apache-2.0; retain upstream notice and license requirements |
+| Component | Upstream | Version in bundle | License |
+| --- | --- | --- | --- |
+| Windows PowerShell/.NET host | Windows system installation | Windows PowerShell 5.1 | Microsoft Windows licensing; no binary is bundled or redistributed |
+| Microsoft DirectX Shader Compiler (DXC) | https://github.com/microsoft/DirectXShaderCompiler | v1.9.2609, Windows x64 | See upstream DXC license and redistribution terms |
+| Naga CLI | https://github.com/gfx-rs/wgpu/tree/trunk/naga-cli | Prebuilt naga-cli 30.0.1 from this project's prior compiler toolchain | MIT OR Apache-2.0; see upstream notices |
 
-The packaging job checks versions and includes available licensing documents.
-The Naga binary is reused from the already published v1.2.0 Windows package: end users do not need Rust or Cargo. Distribution of these tools does not transfer ownership or
-change their terms. Users may consult the upstream project licenses.
+The Naga executable is reused from the previously built Windows compiler-tool package; users do not need to install Rust or Cargo. The release package includes **only** DXC and Naga executables/DLLs under `tools/`; the previously flagged custom `hlsl-server.exe` is **not included or executed**.
 
-**Runtime limitation:** DXC translates HLSL to SPIR-V, and Naga translates
-SPIR-V to WGSL. The browser executes WGSL via WebGPU. The portable bundle is
-not a native D3D12 runner and is limited to compatible compute shaders and
-the provided resource/dispatch host.
+DXC converts HLSL to SPIR-V, Naga converts SPIR-V to WGSL, and the browser executes WGSL through WebGPU. This is not a native Direct3D 12 DXIL runtime.
+
+Always consult upstream licenses and redistributable notices for the compiler binaries. Distribution of the tools does not transfer ownership or change their licensing terms.
