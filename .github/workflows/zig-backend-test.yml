@@ -30,7 +30,7 @@ jobs:
         run: |
           zig version
           if [[ "$RUNNER_OS" == "Windows" ]]; then OUT=playground/hlsl-server.exe; else OUT=playground/hlsl-server; fi
-          zig build-exe playground/zig-server.zig -O ReleaseSafe -femit-bin="$OUT"
+          zig build-exe playground/zig-server.zig -O ReleaseSafe -mcpu baseline -femit-bin="$OUT"
       - name: Verify browser contract and automatic shutdown
         shell: bash
         run: node playground/test-zig.mjs
