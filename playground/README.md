@@ -51,52 +51,17 @@ The Zig 0.13 source remains available at `playground/zig-server.zig` for auditin
 | Timestep 4ms versus 40ms | Larger timesteps change collision overshoot/error | Numerical stability |
 | Drag 0 versus 2 | Persistent versus damped motion | exp(-drag * dt) |
 
-## Edit and actually run a compute shader on the GPU
+## HLSL source editor — native execution paused
 
-The lower-left code box is now an editable HLSL editor. It supports two modes:
+The HLSL panel remains editable: change shader code, inspect the example's resource-binding JSON, copy it or save a `.hlsl` file. The **Run HLSL** control is intentionally disabled while the native backend's Defender detection and access-violation crash remain under investigation.
 
-- **Offline learning (open index.html directly):** edit, copy and save the source. The particle canvas uses its independent JavaScript model and the **Run on GPU** action explains that the compiler bridge is needed.
-- **Real GPU execution (local server):** edit source and buffer bindings, compile with DXC's SPIR-V backend, translate to WGSL using Naga, then dispatch using the browser's **WebGPU** device. The result buffers appear under the editor; compatible particle output can also update the canvas.
+The old architecture was HLSL → DXC SPIR-V → Naga WGSL → WebGPU, with explicit resources at t0, u0 and b0. The Zig server source and tests remain available for review, but **do not execute the previously quarantined compiled server or use historical portable releases**.
 
-**Recommended:** Use the Windows portable ZIP with the compiled Zig backend, DXC and prebuilt Naga. There is no dependency installation and no local Cargo/Rust build.
+### Run WGSL directly instead
 
-**Manual development:** Zig 0.13 can build `playground/zig-server.zig`. For routine use, the launcher obtains the tools automatically and opens a random loopback port. Supported shaders still use compute entry points, buffer descriptors and DXC SPIR-V → Naga WGSL conversion.
+The independent browser-only exercise directly accepts WGSL (WebGPU Shading Language). It initializes a float array, executes a WGSL compute shader using two storage bindings and shows the resulting output array. It does not perform any HLSL compilation.
 
-### Run a different HLSL program
-
-1. Click **Array example** under the editor. The shader doubles eight floats.
-2. Edit the HLSL body (for example, change the multiplier from `2.0` to `3.0`).
-3. Inspect **Buffer bindings and dispatch** JSON. This example binds t0 at WebGPU binding **0**, u0 at **16**, and reads output 16; inputs are eight float32 values.
-4. Click **Run on GPU**. The tool shows DXC/Naga diagnostics, the computed output array and optionally the generated WGSL.
-5. Change the JSON and shader to experiment with another compute buffer layout or entry point.
-
-The resource JSON format supports:
-
-| Key | Meaning |
-| --- | --- |
-| `entry` | HLSL compute entry function, default `CSMain` |
-| `dispatch` | `"auto"` for one-dimensional current particle count, or `[x,y,z]` explicit workgroup counts |
-| `resources[].binding` | WebGPU binding number (DXC t0→0, u0→16, b0→32 by default) |
-| `resources[].access` | `read`, `read_write` or `uniform` |
-| `resources[].dataType` | `f32`, `u32` or `i32` for custom `data` input arrays |
-| `resources[].data` | CPU-uploaded array of numeric values; 4 bytes per value |
-| `resources[].preset` | `particles` or `parameters`; values pulled from top sliders and live model |
-| `resources[].byteLength` | Zero-initialized buffer length in bytes or `"particles"` |
-| `resources[].inspect` | If true, copy this storage buffer to CPU after dispatch |
-| `resources[].display` | Output decode: `f32`, `u32`, `i32`, `vec4` |
-| `resources[].applyToCanvas` | Interpret vec4 values as (x,y,vx,vy) and display the GPU state |
-
-**Not literally any HLSL program:** This runner is a **compute-only, buffer-oriented host**. Graphics shaders need vertex inputs, attachments and a render pipeline; ray tracing needs a different GPU API. Compute shaders using unsupported intrinsics, textures, samplers, groups beyond limits, device-only features, unsupported SPIR-V-to-WGSL transforms or arbitrary host layouts can fail. WebGPU executes **WGSL translated from your HLSL**, not native DXIL/D3D12. For direct HLSL on D3D12, a native D3D12 host is needed.
-
-**Security:** The compiler bridge is bound to 127.0.0.1, rejects cross-origin requests and `#include` directives, applies size and compilation time limits, and never shells out through editable command strings. Untrusted GPU shaders can nevertheless hang a GPU or trigger a driver/device reset. Only run source you trust.
-
-### Run the test harness
-
-~~~powershell
-node playground/test.mjs
-~~~
-
-This checks the frontend scripts. Backend routes, lifecycle and validation are covered by the Zig backend test; real GPU execution remains a separate hardware requirement. The repository's GitHub Actions workflow also attempts a DXC → Naga shader translation smoke test on Linux.
+To learn the relationship between languages, compare the HLSL `[numthreads(64,1,1)]` and `SV_DispatchThreadID` constructs with WGSL `@workgroup_size(64)` and `@builtin(global_invocation_id)`. Both represent related compute concepts, but they are **not** interchangeable source languages.
 
 ## Compile actual HLSL
 
