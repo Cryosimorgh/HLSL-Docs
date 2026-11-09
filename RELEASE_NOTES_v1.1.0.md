@@ -15,9 +15,9 @@ Released November 2026.
 ## How to use
 
 1. Extract the ZIP or clone the repository.
-2. For **offline learning**, open \`playground/index.html\`. The editor, JavaScript particle animation and saving source work without any server.
-3. For **real GPU compute**, install Node.js 20+, DXC with the SPIR-V backend and Naga CLI (\`cargo install naga-cli --locked\`). Use a WebGPU-capable desktop browser.
-4. From the repository root, run \`node playground/server.mjs\` and open **http://127.0.0.1:4173/**.
+2. For **offline learning**, open `playground/index.html`. The editor, JavaScript particle animation and saving source work without any server.
+3. For **real GPU compute**, install Node.js 20+, DXC with the SPIR-V backend and Naga CLI (`cargo install naga-cli --locked`). Use a WebGPU-capable desktop browser.
+4. From the repository root, run `node playground/server.mjs` and open **http://127.0.0.1:4173/**.
 5. Edit the shader and resource JSON, then click **Run on GPU**. Read the result buffer and compilation diagnostics.
 6. See [the setup guide](playground/README.md) for the binding contract, limits and experiments.
 
