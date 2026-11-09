@@ -158,49 +158,30 @@ fn sessionEndpoint(req: *Request, action: []const u8) void {
     if (!known) { failure(req, .not_found, "Unknown or expired session."); return; }
     jsonResponse(req, .ok, .{ .ok = true, .activeTabs = count });
 }
-// Ensure an invalid/untrusted shader cannot keep the service occupied forever.
-// The watchdog terminates only its own DXC/Naga child after 15 seconds.
-fn childWatch(child: *std.process.Child, finished: *std.atomic.Value(bool)) void {
-    var ticks: usize = 0;
-    while (ticks < 60) : (ticks += 1) {
-        if (finished.load(.acquire)) return;
-        std.time.sleep(250 * std.time.ns_per_ms);
-    }
-    if (!finished.load(.acquire)) {
-        _ = child.kill() catch {};
-    }
-}
+// Windows Zig 0.13's std.io.poll collector can panic when reading child
+// stdout/stderr pipes from a worker thread. Avoid pipes entirely and use DXC
+// -Fe to capture compiler diagnostics into a bounded temporary file.
 fn cappedRun(argv: []const []const u8) !std.process.Child.RunResult {
     var child = std.process.Child.init(argv, A);
     child.stdin_behavior = .Ignore;
-    child.stdout_behavior = .Pipe;
-    child.stderr_behavior = .Pipe;
+    child.stdout_behavior = .Inherit;
+    child.stderr_behavior = .Inherit;
     try child.spawn();
-    var finished = std.atomic.Value(bool).init(false);
-    const watcher = try std.Thread.spawn(.{}, childWatch, .{ &child, &finished });
-    var joined = false;
-    var out = std.ArrayList(u8).init(A);
-    var err = std.ArrayList(u8).init(A);
-    defer {
-        finished.store(true, .release);
-        if (!joined) watcher.join();
+    if (@import("builtin").os.tag == .windows) {
+        std.os.windows.WaitForSingleObjectEx(child.id, 15_000, false) catch |err| {
+            if (err == error.WaitTimeOut) {
+                _ = child.kill() catch {};
+                return error.CompilerTimeout;
+            }
+            _ = child.kill() catch {};
+            return err;
+        };
     }
-    errdefer out.deinit();
-    errdefer err.deinit();
-    child.collectOutput(&out, &err, max_output) catch |e| {
-        finished.store(true, .release);
-        _ = child.kill() catch {};
-        return e;
-    };
-    // Join before reading/waiting on child state because watchdog may have
-    // already killed/reaped the child when the timeout was reached.
-    finished.store(true, .release);
-    watcher.join();
-    joined = true;
+    const term = try child.wait();
     return .{
-        .term = try child.wait(),
-        .stdout = try out.toOwnedSlice(),
-        .stderr = try err.toOwnedSlice(),
+        .term = term,
+        .stdout = try A.dupe(u8, ""),
+        .stderr = try A.dupe(u8, ""),
     };
 }
 fn childSucceeded(result: std.process.Child.RunResult) bool {
@@ -271,9 +252,11 @@ fn compileHlsl(req: *Request) void {
         file.writeAll(source) catch { failure(req, .internal_server_error, "Cannot write shader source."); return; };
     }
 
+    const diagnostics = std.fs.path.join(A, &.{ work, "dxc-errors.txt" }) catch return;
+    defer A.free(diagnostics);
     const dxc_args = [_][]const u8{
         dxc_path, "-spirv", "-fspv-target-env=vulkan1.1", "-T", "cs_6_0",
-        "-E", entry, "-Fo", spirv,
+        "-E", entry, "-Fo", spirv, "-Fe", diagnostics,
         "-fvk-t-shift", "0", "0", "-fvk-u-shift", "16", "0",
         "-fvk-b-shift", "32", "0", "-fvk-s-shift", "48", "0", input,
     };
@@ -284,7 +267,8 @@ fn compileHlsl(req: *Request) void {
     defer A.free(dxc.stdout);
     defer A.free(dxc.stderr);
     if (!childSucceeded(dxc)) {
-        failure(req, .bad_request, if (dxc.stderr.len > 0) dxc.stderr else "DXC compilation failed."); return;
+        const errors_text = std.fs.cwd().readFileAlloc(A, diagnostics, max_output) catch "DXC compilation failed.";
+        failure(req, .bad_request, errors_text); return;
     }
 
     const naga_args = [_][]const u8{ naga_path, spirv, wgsl };
@@ -304,7 +288,7 @@ fn compileHlsl(req: *Request) void {
     if (output.len == 0) { failure(req, .bad_request, "Empty WGSL output."); return; }
     jsonResponse(req, .ok, .{
         .wgsl = output,
-        .log = if (naga.stderr.len > 0) naga.stderr else dxc.stderr,
+        .log = std.fs.cwd().readFileAlloc(A, diagnostics, max_output) catch "",
         .toolchain = "Zig + DXC SPIR-V + prebuilt Naga WGSL",
         .mapping = .{ .t0 = 0, .u0 = 16, .b0 = 32, .s0 = 48 },
     });
