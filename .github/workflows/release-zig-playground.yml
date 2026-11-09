@@ -1,4 +1,4 @@
-name: Release HLSL Playground v1.3.1 — Zig backend, no Rust/Node install
+name: Release HLSL Playground v1.3.2 — Zig backend, no Rust/Node install
 
 on:
   push:
@@ -77,13 +77,53 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Naga could not translate starter SPIR-V' }
           if (-not (Test-Path $wgsl)) { throw 'Naga WGSL output missing' }
           if (-not (Select-String -LiteralPath $wgsl -Pattern '@compute' -Quiet)) { throw 'WGSL has no compute entry' }
+      - name: Verify clean source checkout auto-download and boot (no DXC/Naga preinstalled)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $isolated = Join-Path $env:RUNNER_TEMP 'checkout-without-tools'
+          New-Item -ItemType Directory -Path $isolated -Force | Out-Null
+          Copy-Item -LiteralPath 'Start-HLSL-Playground.ps1' -Destination $isolated
+          $env:HLSL_BOOTSTRAP_CACHE = Join-Path $env:RUNNER_TEMP 'source-bootstrap-cache'
+          try {
+            & (Join-Path $isolated 'Start-HLSL-Playground.ps1') -NoBrowser
+            $cached = Join-Path $env:HLSL_BOOTSTRAP_CACHE 'HLSL-Playground-Windows-v1.3.1'
+            if (-not (Test-Path (Join-Path $cached 'tools\dxc\dxc.exe'))) { throw 'Checkout bootstrap did not fetch DXC' }
+            if (-not (Test-Path (Join-Path $cached 'tools\naga\naga.exe'))) { throw 'Checkout bootstrap did not fetch Naga' }
+            if (-not (Test-Path (Join-Path $cached 'playground\hlsl-server.exe'))) { throw 'Checkout bootstrap did not fetch Zig runtime' }
+            $runtimeLogs = Join-Path $cached '.playground-runtime'
+            $ready = Get-ChildItem -LiteralPath $runtimeLogs -File -Filter ready.json -Recurse |
+              Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if (-not $ready) { throw 'Checkout bootstrap did not launch the service' }
+            $service = Get-Content -LiteralPath $ready.FullName -Raw | ConvertFrom-Json
+            $health = Invoke-RestMethod -Uri "$($service.url)/api/health"
+            if ($health.backend -ne 'zig') { throw 'Expected Zig API from checkout launcher' }
+            $session = Invoke-RestMethod -Uri "$($service.url)/api/session/open" -Method Post -ContentType 'application/json' -Body '{}'
+            $payload = @{ token = $session.token } | ConvertTo-Json -Compress
+            Invoke-RestMethod -Uri "$($service.url)/api/session/close" -Method Post -ContentType 'application/json' -Body $payload | Out-Null
+            $stopped = $false
+            for ($i = 0; $i -lt 40; $i++) {
+              Start-Sleep -Milliseconds 250
+              if (-not (Get-Process -Id $service.pid -ErrorAction SilentlyContinue)) {
+                $stopped = $true
+                break
+              }
+            }
+            if (-not $stopped) {
+              Stop-Process -Id $service.pid -Force -ErrorAction SilentlyContinue
+              throw 'Checkout runtime did not stop after final browser session'
+            }
+            Write-Host 'PASS: clean checkout auto-download, SHA256 verification, launch, Zig health and shutdown'
+          } finally {
+            Remove-Item Env:\HLSL_BOOTSTRAP_CACHE -ErrorAction SilentlyContinue
+          }
       - name: Assemble portable Windows and source ZIPs
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
           $out = Join-Path $env:RUNNER_TEMP 'release-assets'
-          $portable = Join-Path $out 'HLSL-Playground-Windows-v1.3.1'
-          $source = Join-Path $out 'HLSL-Playground-Source-v1.3.1'
+          $portable = Join-Path $out 'HLSL-Playground-Windows-v1.3.2'
+          $source = Join-Path $out 'HLSL-Playground-Source-v1.3.2'
           foreach ($folder in @($portable, $source)) {
             New-Item -ItemType Directory -Path $folder -Force | Out-Null
             foreach ($name in @('playground','.agents','docs')) {
@@ -91,7 +131,7 @@ jobs:
             }
             foreach ($name in @('Start-HLSL-Playground.cmd','Start-HLSL-Playground.ps1',
                 'README-WINDOWS.txt','README.md','HLSL-Handbook.md','LICENSE',
-                'THIRD_PARTY_NOTICES.md','RELEASE_NOTES_v1.3.1.md')) {
+                'THIRD_PARTY_NOTICES.md','RELEASE_NOTES_v1.3.2.md')) {
               Copy-Item -LiteralPath $name -Destination $folder
             }
           }
@@ -157,8 +197,8 @@ jobs:
             throw 'Bundled Zig service remained alive after final tab closed'
           }
           Remove-Item -LiteralPath $runtimeDir -Recurse -Force
-          $portableZip = Join-Path $out 'HLSL-Playground-Windows-v1.3.1.zip'
-          $sourceZip = Join-Path $out 'HLSL-Playground-Source-v1.3.1.zip'
+          $portableZip = Join-Path $out 'HLSL-Playground-Windows-v1.3.2.zip'
+          $sourceZip = Join-Path $out 'HLSL-Playground-Source-v1.3.2.zip'
           Remove-Item -LiteralPath (Join-Path $source 'playground\hlsl-server.exe') -ErrorAction SilentlyContinue
           Compress-Archive -LiteralPath $portable -DestinationPath $portableZip -CompressionLevel Optimal
           Compress-Archive -LiteralPath $source -DestinationPath $sourceZip -CompressionLevel Optimal
@@ -169,8 +209,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          gh release view v1.3.1 *> $null
-          if ($LASTEXITCODE -eq 0) { throw 'v1.3.1 already exists: refusing to overwrite.' }
+          gh release view v1.3.2 *> $null
+          if ($LASTEXITCODE -eq 0) { throw 'v1.3.2 already exists: refusing to overwrite.' }
           $dir = Join-Path $env:RUNNER_TEMP 'release-assets'
-          gh release create v1.3.1 (Join-Path $dir 'HLSL-Playground-Windows-v1.3.1.zip') (Join-Path $dir 'HLSL-Playground-Source-v1.3.1.zip') --target $env:GITHUB_SHA --title 'HLSL Playground v1.3.1 — Zig backend, zero Rust or Node setup' --notes-file RELEASE_NOTES_v1.3.1.md
+          gh release create v1.3.2 (Join-Path $dir 'HLSL-Playground-Windows-v1.3.2.zip') (Join-Path $dir 'HLSL-Playground-Source-v1.3.2.zip') --target $env:GITHUB_SHA --title 'HLSL Playground v1.3.2 — Zig backend, zero Rust or Node setup' --notes-file RELEASE_NOTES_v1.3.2.md
           if ($LASTEXITCODE -ne 0) { throw 'GitHub release creation failed' }
