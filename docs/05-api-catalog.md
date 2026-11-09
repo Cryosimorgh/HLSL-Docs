@@ -345,10 +345,10 @@ void WriteID(uint3 thread : SV_DispatchThreadID,
 | [outputtopology("triangle")] + [numthreads(...)] | Mesh shader declarations, with further mesh-specific requirements |
 
 ~~~hlsl
-[unroll]
 float Poly(float x)
 {
     float y = 1.0f;
+    [unroll]
     for (int i = 0; i < 4; ++i)
         y = y * x + 1.0f;
     return y;
