@@ -75,7 +75,7 @@ try {
     if(integration){
         const shader=await readFile(join(folder,"particle-step.hlsl"),"utf8");
         const result=await post("/api/compile",{source:shader,entry:"CSMain"});
-        assert.equal(result.status,200,"Real compiler failed: "+await result.text());
+        if(result.status!==200) throw Error("Real compiler failed: "+await result.text());
         const json=await result.json();
         assert.match(json.wgsl,/@compute/);
         assert.equal(json.mapping.u0,16);
