@@ -30,7 +30,7 @@ A workflow skill derived from the [HLSL Handbook](https://github.com/Cryosimorgh
   - [HLSL API catalog](https://github.com/Cryosimorgh/HLSL-Docs/blob/main/docs/05-api-catalog.md)
   - [Advanced features](https://github.com/Cryosimorgh/HLSL-Docs/blob/main/docs/06-advanced.md)
   - [Sunder case study](https://github.com/Cryosimorgh/HLSL-Docs/blob/main/docs/07-sunder-case-study.md)
-- **[Interactive tutorial](https://github.com/Cryosimorgh/HLSL-Docs/tree/main/playground):** an offline Canvas/JavaScript visualization of an analogous compute kernel, accompanied by *real* HLSL source for DXC compilation. **Do not describe the browser simulation as executing HLSL.**
+- **[Interactive tutorial](https://github.com/Cryosimorgh/HLSL-Docs/tree/main/playground):** an offline Canvas/JavaScript visualization plus an optional real compute execution mode: edited HLSL is compiled by local DXC to SPIR-V, translated by Naga into WGSL and dispatched by the browser using WebGPU with explicit buffer bindings. **Do not describe the offline JavaScript simulation as executing HLSL, or the WebGPU pathway as native D3D12/DXIL execution.**
 
 ## Quick canonical example (SM 6.0 compute)
 
