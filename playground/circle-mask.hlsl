@@ -9,7 +9,9 @@ cbuffer CircleParams : register(b0)
     float CircleRadius;
     float EdgeWidth;
     float SampleCount;     // float32 at byte 16; 1024 in the preset
-    float3 Padding;       // complete the second 16-byte constant register
+    float Padding0;        // byte 20
+    float Padding1;        // byte 24
+    float Padding2;        // byte 28
 };
 
 StructuredBuffer<float4> Input : register(t0);
