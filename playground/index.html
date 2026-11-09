@@ -65,7 +65,7 @@ a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem)
 <p class="notice" id="compile-status" role="status" aria-live="polite"></p>
 <pre id="gpu-output" class="result-panel" aria-label="Compute shader output and errors">Output appears here after a GPU run.</pre>
 <pre id="wgsl-output" class="result-panel" aria-label="Translated WGSL source" hidden></pre>
-<p class="hint"><strong>To run:</strong> Use the <strong>Windows portable ZIP</strong> and double-click <code>Start-HLSL-Playground.cmd</code>. All backend/compiler executables are bundled; no Rust or Node installation. For source builds, compile <code>zig-server.zig</code> using Zig 0.13 and run its executable. <a href="README.md">Setup guide</a>. <strong>Not all HLSL runs:</strong> this host supports compatible compute buffers, not arbitrary graphics, ray tracing or all D3D12 intrinsics.</p>
+<p class="hint"><strong>To run real HLSL compute:</strong> Double-click <code>Start-HLSL-Playground.cmd</code> from either the Windows portable ZIP or a source checkout. The source launcher automatically obtains the verified Zig/DXC/Naga runtime when binaries are missing. Use the fresh localhost tab it opens, not an old offline file. <a href="README.md">Setup guide</a>. <strong>Not all HLSL runs:</strong> this host supports compatible compute buffers, not arbitrary graphics, ray tracing or all D3D12 intrinsics.</p>
 </section>
 <section class="panel steps">
 <h2>5. Try three experiments</h2>
