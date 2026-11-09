@@ -6,19 +6,28 @@ The offline mode is a small, dependency-free tutorial for learning what **HLSL c
 
 ## One-click Windows launcher (recommended)
 
-For the portable Windows ZIP, **no terminal commands or tool installation are required**:
+For the portable Windows ZIP, **no terminal commands, Rust, Cargo, Node or Zig installation are required**:
 
 1. Download the [latest Windows portable release](https://github.com/Cryosimorgh/HLSL-Docs/releases).
 2. Extract the ZIP completely and double-click **Start-HLSL-Playground.cmd**.
-3. The launcher automatically starts its bundled Node/DXC/Naga local service on an available loopback port and opens the tutorial in your default browser.
+3. The launcher automatically starts its bundled Zig/DXC/prebuilt-Naga local service on an available loopback port and opens the tutorial in your default browser.
 4. Press **Close playground & stop server**, or close the tab. The server and compiler child processes stop automatically when the last connected tab closes. A browser crash is handled by a heartbeat timeout (normally about 45 seconds).
 5. No global installation, persistent background service, scheduled task, or system PATH changes are made.
 
 A tab opened by Windows cannot always be physically closed by a webpage; the Close button ends the session and navigates it to a blank page. It does **not** close other browser tabs or the entire browser.
 
-### Source/advanced launcher
+### Source builds (developers only)
 
-The same Start-HLSL-Playground.cmd works from a source checkout **if Node.js, DXC and Naga are already installed**. It finds bundled versions first and then searches PATH, so downloading the portable ZIP is the simplest setup.
+Zig 0.13.0 is needed **only if you want to compile the backend yourself**. End users should use the Windows ZIP; it already contains the executable and a prebuilt Naga translator.
+
+From the repository root on Windows PowerShell:
+
+~~~powershell
+$zigArgs = @('build-exe','playground/zig-server.zig','-O','ReleaseSafe','-femit-bin=playground/hlsl-server.exe')
+& zig @zigArgs
+~~~
+
+Ensure Microsoft DXC with SPIR-V support and prebuilt Naga are installed or present in PATH, then run **Start-HLSL-Playground.cmd**. The launcher starts hlsl-server.exe automatically. See [Zig backend release notes](../RELEASE_NOTES_v1.3.0.md).
 
 ## Run it
 
@@ -48,21 +57,9 @@ The lower-left code box is now an editable HLSL editor. It supports two modes:
 - **Offline learning (open index.html directly):** edit, copy and save the source. The particle canvas uses its independent JavaScript model and the **Run on GPU** action explains that the compiler bridge is needed.
 - **Real GPU execution (local server):** edit source and buffer bindings, compile with DXC's SPIR-V backend, translate to WGSL using Naga, then dispatch using the browser's **WebGPU** device. The result buffers appear under the editor; compatible particle output can also update the canvas.
 
-**Requirements:** Node.js 20+, DXC with SPIR-V codegen enabled, [Naga CLI](https://github.com/gfx-rs/wgpu/tree/trunk/naga) and a modern WebGPU browser (for example recent Chrome/Edge with a capable GPU).
+**Recommended:** Use the Windows portable ZIP with the compiled Zig backend, DXC and prebuilt Naga. There is no dependency installation and no local Cargo/Rust build.
 
-Install Naga (requires Rust/Cargo):
-
-~~~powershell
-cargo install naga-cli --locked
-~~~
-
-For the **source/advanced mode only**, install DXC from [Microsoft's releases](https://github.com/microsoft/DirectXShaderCompiler/releases), and ensure `dxc` and `naga` are on PATH. From the **repository root** run:
-
-~~~powershell
-node playground/server.mjs
-~~~
-
-Open **http://127.0.0.1:4173/** in a WebGPU-compatible browser. If required, set environment variables `DXC_PATH`, `NAGA_PATH` and `HLSL_PORT` before starting the server.
+**Manual/developer mode:** Build playground/zig-server.zig using Zig 0.13, set DXC_PATH/NAGA_PATH if the binaries are not on PATH, run the resulting hlsl-server executable, then visit http://127.0.0.1:4173/ in a WebGPU browser. Supported shaders use HLSL compute entry points, buffer descriptors, and DXC SPIR-V → Naga WGSL conversion.
 
 ### Run a different HLSL program
 
@@ -98,7 +95,7 @@ The resource JSON format supports:
 node playground/test.mjs
 ~~~
 
-This checks the editor's JavaScript syntax, the local server and basic error handling with **mock compiler binaries**, not real GPU execution. The repository's GitHub Actions workflow also attempts a DXC → Naga shader translation smoke test on Linux.
+This checks the frontend scripts. Backend routes, lifecycle and validation are covered by the Zig backend test; real GPU execution remains a separate hardware requirement. The repository's GitHub Actions workflow also attempts a DXC → Naga shader translation smoke test on Linux.
 
 ## Compile actual HLSL
 
