@@ -10,7 +10,7 @@ Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, an
 
 ## One-click interactive HLSL playground (Windows)
 
-**Download the Windows portable ZIP from [the latest release](https://github.com/Cryosimorgh/HLSL-Docs/releases).** Extract everything and double-click **Start-HLSL-Playground.cmd**. The launcher opens your browser and runs the bundled Zig backend, DXC and prebuilt Naga automatically—no Rust, Cargo, Node or Zig installation, terminal commands or global configuration needed.
+**Extract the [Windows portable ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases) or clone this repository, then double-click `Start-HLSL-Playground.cmd`.** A source checkout automatically downloads a checksum-verified 15 MB Zig/DXC/Naga runtime to your per-user cache the first time. The launcher opens your browser and runs the bundled Zig backend, DXC and prebuilt Naga automatically—no Rust, Cargo, Node or Zig installation, terminal commands or global configuration needed.
 
 Press **Close playground & stop server** or close the final tutorial tab to stop the local compiler service. The server also closes after a missed-heartbeat timeout if the browser crashes, without closing unrelated browser tabs.
 
@@ -22,9 +22,9 @@ The browser executes **WGSL translated from HLSL** using WebGPU for compatible c
 | --- | --- |
 | **[HLSL Engineer Agent Skill](.agents/skills/hlsl-engineer/SKILL.md)** | Reusable Codex/Agent Skills workflow for writing, reviewing and debugging HLSL shaders |
 | **[Interactive HLSL editor + GPU runner](playground/README.md)** | Edit HLSL compute code and buffer bindings; compile with local DXC/Naga and run translated WGSL on WebGPU, with outputs and compiler errors |
-| **[Run the playground](playground/index.html)** | Download this repo, then open the HTML file locally; no server required |
+| **[Offline particle tutorial](playground/index.html)** | Opens locally without a server, but cannot execute HLSL; use the launcher for GPU runs |
 | **[DXC-compilable compute shader](playground/particle-step.hlsl)** | See the actual HLSL source corresponding to the simulation math |
-| **[v1.3.0 Zig backend release notes](RELEASE_NOTES_v1.3.1.md)** | One-click Windows setup with no Rust/Node install, Zig server and WebGPU execution |
+| **[Zig backend release notes](RELEASE_NOTES_v1.3.1.md)** | One-click Windows setup with no Rust/Node install, Zig server and WebGPU execution |
 
 The offline canvas **models compute-shader equations in JavaScript**. For real compute execution, launch the local compiler bridge and use the browser's WebGPU mode; it runs WGSL translated from your HLSL, not native D3D12 DXIL. See the [setup guide](playground/README.md).
 
