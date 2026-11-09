@@ -1,14 +1,14 @@
 # One-click Windows launcher for the HLSL Compute Playground.
-# The portable release bundles node.exe, dxc.exe and naga.exe; no installation
+# The portable release bundles hlsl-server.exe (Zig), dxc.exe and naga.exe; no installation
 # or global PATH changes are needed. Server binds to 127.0.0.1 only.
 # The browser tab owns a heartbeat lease and the server exits after it closes.
 [CmdletBinding()]
 param([switch]$NoBrowser)
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$ServerScript = Join-Path $Root "playground\server.mjs"
+$ServerScript = Join-Path $Root "playground\hlsl-server.exe"
 if (-not (Test-Path -LiteralPath $ServerScript -PathType Leaf)) {
-    throw "Missing playground\server.mjs. Extract the FULL release ZIP, then run the launcher."
+    throw "Missing Zig backend hlsl-server.exe. Extract the FULL Zig release ZIP, then run the launcher."
 }
 function Find-Executable {
     param([string]$Bundled, [string]$Executable)
@@ -21,7 +21,6 @@ function Find-Executable {
     if ($found) { return $found.Source }
     throw "Missing $Executable. Use the HLSL-Playground-Windows portable release with tools included."
 }
-$Node = Find-Executable (Join-Path $Root "tools\node\node.exe") "node.exe"
 $Dxc = Find-Executable (Join-Path $Root "tools\dxc\dxc.exe") "dxc.exe"
 $Naga = Find-Executable (Join-Path $Root "tools\naga\naga.exe") "naga.exe"
 $logs = Join-Path $Root ".playground-runtime"
@@ -48,10 +47,9 @@ $env:NAGA_PATH = $Naga
 $Server = $null
 try {
     $argsForNode = @{
-        FilePath = $Node
+        FilePath = $ServerScript
         WorkingDirectory = $Root
-        ArgumentList = ('"' + $ServerScript + '"')
-        WindowStyle = "Hidden"
+                WindowStyle = "Hidden"
         PassThru = $true
         RedirectStandardOutput = $outLog
         RedirectStandardError = $errLog
@@ -92,4 +90,4 @@ try {
     throw
 }
 # Do not wait for the service here: its heartbeat lease owns its lifetime.
-# The browser is never force-killed; only this app's Node compiler process ends.
+# The browser is never force-killed; only this app's Zig compiler service ends.
