@@ -15,6 +15,6 @@ for(const id of ["code","bindings","run-gpu","close-playground","compile-status"
     assert.ok(html.includes('id="'+id+'"'),"Missing DOM element: "+id);
 }
 assert.ok(runner.includes("/api/compile"));
-assert.ok(runner.includes("/api/session/open"));
+assert.ok(runner.includes("/api/session/") && runner.includes('sessionCall("open")'));
 assert.ok(html.includes("zig-server.zig"));
 console.log("PASS: frontend JavaScript and Zig-backed session/run controls");
