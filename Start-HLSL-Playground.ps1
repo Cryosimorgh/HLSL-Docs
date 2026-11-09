@@ -5,6 +5,11 @@
 [CmdletBinding()]
 param([switch]$NoBrowser)
 $ErrorActionPreference = "Stop"
+# SECURITY HOLD: Existing unsigned Windows server binaries were quarantined
+# as a severe Trojan and one also crashed with 0xC0000005. Until the exact
+# Defender classification and binary provenance are reviewed, block the
+# native runner even if the files exist locally. Do not bypass Defender.
+throw "Native HLSL server launch is temporarily disabled pending a Defender security review (issue #1). Do not restore or allowlist quarantined hlsl-server.exe. Use playground/index.html for the offline JavaScript tutorial: https://github.com/Cryosimorgh/HLSL-Docs/issues/1"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 function Test-CompleteRuntime {
