@@ -7,6 +7,77 @@ const editor = $("code"), manifestArea = $("bindings"), status = $("compile-stat
       results = $("gpu-output"), wgslArea = $("wgsl-output"), runButton = $("run-gpu");
 const maxBytes = 4*1024*1024, maxTotal = 8*1024*1024, maxGroups = 1024;
 const isBridgeOrigin = /^http:\/\/127\.0\.0\.1:\d+$/.test(location.origin);
+
+// The browser is intentionally unable to launch or kill OS processes.
+// It owns a lease in the loopback-only Node server started by the launcher.
+// Closing the tab sends a best-effort release; heartbeat expiration handles
+// forced browser exits / lost pagehide events.
+let leaseToken = null, leaseClosed = false, heartbeatTimer = null;
+async function sessionCall(action, token, keepalive = false) {
+  const response = await fetch("/api/session/" + action, {
+    method: "POST", headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(token ? {token} : {}),
+    cache: "no-store", keepalive
+  });
+  if (!response.ok) throw Error("Session " + action + ": HTTP " + response.status);
+  return response.json();
+}
+async function openLease() {
+  if (!isBridgeOrigin || leaseClosed) return;
+  try {
+    const session = await sessionCall("open");
+    if (leaseClosed) {
+      await sessionCall("close", session.token, true).catch(()=>{});
+      return;
+    }
+    leaseToken = session.token;
+    heartbeatTimer = setInterval(async () => {
+      if (leaseClosed || !leaseToken) return;
+      try { await sessionCall("ping", leaseToken); }
+      catch {
+        // An expired tab lease can be recovered if the service still runs.
+        leaseToken = null; clearInterval(heartbeatTimer); heartbeatTimer = null;
+        await openLease();
+      }
+    }, session.heartbeatMs || 5000);
+  } catch (e) {
+    setStatus("Local server connection failed: " + e.message, true);
+  }
+}
+function sendCloseBeacon() {
+  if (leaseClosed) return;
+  leaseClosed = true;
+  if (heartbeatTimer) clearInterval(heartbeatTimer);
+  heartbeatTimer = null;
+  if (leaseToken && isBridgeOrigin && navigator.sendBeacon) {
+    const body = new Blob([JSON.stringify({token:leaseToken})], {type:"application/json"});
+    navigator.sendBeacon("/api/session/close", body);
+  }
+  leaseToken = null;
+}
+async function closePlayground() {
+  $("close-playground").disabled = true;
+  if (!leaseClosed && leaseToken && isBridgeOrigin) {
+    const token = leaseToken;
+    leaseClosed = true;
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    heartbeatTimer = null; leaseToken = null;
+    try { await sessionCall("close", token, true); }
+    catch { /* lease expires if the browser has already disconnected */ }
+  } else {
+    sendCloseBeacon();
+  }
+  setStatus("Session closed. The local compiler stops when all tabs are gone.");
+  // Scripts cannot force-close a tab opened by another application. Navigate
+  // away so this page no longer owns a lease, without killing the browser.
+  location.replace("about:blank");
+}
+window.addEventListener("pagehide", sendCloseBeacon);
+window.addEventListener("visibilitychange", () => {
+  if (!document.hidden && isBridgeOrigin && !leaseClosed && !leaseToken) void openLease();
+});
+$("close-playground").addEventListener("click", () => { void closePlayground(); });
+
 function setStatus(message,error=false) {
   status.textContent=message; status.style.color=error?"#ffa8a8":"#9ce3ff";
 }
@@ -221,4 +292,5 @@ $("show-wgsl").addEventListener("change",e=>wgslArea.hidden=!e.target.checked);
 setStatus(isBridgeOrigin?
   "Ready: run editable HLSL via local compiler + browser WebGPU.":
   "Offline code editor ready. Real GPU runs require the local compiler server (see README).");
+void openLease();
 })();
