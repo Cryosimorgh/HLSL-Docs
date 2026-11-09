@@ -13,12 +13,12 @@ Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, an
 | Resource | Use it for |
 | --- | --- |
 | **[HLSL Engineer Agent Skill](.agents/skills/hlsl-engineer/SKILL.md)** | Reusable Codex/Agent Skills workflow for writing, reviewing and debugging HLSL shaders |
-| **[Interactive Compute Shader Playground](playground/README.md)** | Offline browser tutorial: edit gravity, bounce, drag, timestep and thread-group size; see motion and lane utilization |
+| **[Interactive HLSL editor + GPU runner](playground/README.md)** | Edit HLSL compute code and buffer bindings; compile with local DXC/Naga and run translated WGSL on WebGPU, with outputs and compiler errors |
 | **[Run the playground](playground/index.html)** | Download this repo, then open the HTML file locally; no server required |
 | **[DXC-compilable compute shader](playground/particle-step.hlsl)** | See the actual HLSL source corresponding to the simulation math |
 | **[v1.0.0 release notes](RELEASE_NOTES.md)** | Installation, contents and validation boundaries |
 
-The browser playground **models compute-shader equations in JavaScript**. It does not run HLSL or measure GPU performance; use the real `.hlsl` source and a D3D12 host for native execution.
+The offline canvas **models compute-shader equations in JavaScript**. For real compute execution, launch the local compiler bridge and use the browser's WebGPU mode; it runs WGSL translated from your HLSL, not native D3D12 DXIL. See the [setup guide](playground/README.md).
 
 ### Install the Agent Skill
 
