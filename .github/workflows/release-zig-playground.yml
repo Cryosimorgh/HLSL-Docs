@@ -1,10 +1,8 @@
 name: Release HLSL Playground v1.3.2 — Zig backend, no Rust/Node install
 
+# Manual-only while Defender classification of previous binaries is investigated.
+# No new distributable should publish without security review and evidence.
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/release-zig-playground.yml'
   workflow_dispatch:
 
 permissions:
@@ -26,7 +24,7 @@ jobs:
       - name: Compile the Zig compiler backend
         shell: pwsh
         run: |
-          $zigArgs = @('build-exe','playground/zig-server.zig','-O','ReleaseSafe','-femit-bin=playground/hlsl-server.exe')
+          $zigArgs = @('build-exe','playground/zig-server.zig','-O','ReleaseSafe','-mcpu','baseline','-femit-bin=playground/hlsl-server.exe')
           & zig @zigArgs
           if ($LASTEXITCODE -ne 0) { throw 'Zig backend build failed' }
       - name: Smoke test compiled Zig API, sessions and automatic shutdown
