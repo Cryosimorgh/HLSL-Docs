@@ -25,6 +25,10 @@ var ready_file: ?[]const u8 = null;
 var startup_grace_ms: i64 = 90_000;
 var lease_timeout_ms: i64 = 45_000;
 var close_delay_ms: i64 = 1_200;
+// Single-threaded request dispatch avoids detached request workers and
+// process termination from arbitrary worker threads on Windows.
+var shutdown_requested = std.atomic.Value(bool).init(false);
+var listen_address: std.net.Address = undefined;
 
 fn env(name: []const u8, fallback: []const u8) []const u8 {
     return std.process.getEnvVarOwned(A, name) catch fallback;
@@ -348,8 +352,13 @@ fn idleMonitor() void {
             (!ever_opened and now - started_ms >= startup_grace_ms));
         lock.unlock();
         if (should_stop) {
-            if (ready_file) |path| std.fs.cwd().deleteFile(path) catch {};
-            std.process.exit(0);
+            // Ask the MAIN thread to leave accept(), join this monitor and
+            // return normally. Never ExitProcess while request workers or
+            // CRT/TLS destructors might still be active (0xc0000005 risk).
+            shutdown_requested.store(true, .release);
+            const wake = std.net.tcpConnectToAddress(listen_address) catch return;
+            wake.close();
+            return;
         }
     }
 }
@@ -368,8 +377,8 @@ pub fn main() !void {
     naga_path = env("NAGA_PATH", "naga");
     ready_file = std.process.getEnvVarOwned(A, "HLSL_READY_FILE") catch null;
 
-    const address = try std.net.Address.parseIp4("127.0.0.1", port);
-    var server = try address.listen(.{ .reuse_address = false });
+    listen_address = try std.net.Address.parseIp4("127.0.0.1", port);
+    var server = try listen_address.listen(.{ .reuse_address = false });
     defer server.deinit();
     std.debug.print("HLSL Playground Zig backend listening at {s}\n", .{origin});
     if (ready_file) |path| {
@@ -382,13 +391,22 @@ pub fn main() !void {
         try file.writeAll(ready);
     }
     const monitor = try std.Thread.spawn(.{}, idleMonitor, .{});
-    monitor.detach();
+    // Run localhost HTTP requests on the main thread. Compile operations
+    // are capped at 15 seconds, below the default 45-second tab lease.
+    // Heartbeats queued during a compile are handled when it completes.
     while (true) {
-        const c = server.accept() catch continue;
-        const thread = std.Thread.spawn(.{}, serveConnection, .{c}) catch {
-            c.stream.close();
+        const c = server.accept() catch {
+            if (shutdown_requested.load(.acquire)) break;
             continue;
         };
-        thread.detach();
+        if (shutdown_requested.load(.acquire)) {
+            c.stream.close();
+            break;
+        }
+        serveConnection(c);
     }
+    monitor.join();
+    if (ready_file) |path| std.fs.cwd().deleteFile(path) catch {};
+    // Function return closes the listener and performs orderly runtime
+    // teardown instead of abrupt process termination from a detached thread.
 }
