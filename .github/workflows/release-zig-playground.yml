@@ -22,6 +22,7 @@ jobs:
         uses: mlugg/setup-zig@v2
         with:
           version: '0.13.0'
+      # The release is gated on the real Zig HTTP compile endpoint, not only standalone DXC/Naga CLI checks.
       - name: Compile the Zig compiler backend
         shell: pwsh
         run: |
