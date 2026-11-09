@@ -23,5 +23,5 @@ for(const id of ["wgsl-code","wgsl-input","wgsl-output","wgsl-run","wgsl-reset"]
     assert.ok(html.includes('id="'+id+'"'),"Missing standalone GPU teaching control: "+id);
 }
 assert.ok(html.includes('src="browser-gpu.js"'));
-assert.ok(html.includes('id="run-gpu" class="primary" type="button" disabled'),"Native HLSL runner must remain disabled during investigation.");
-console.log("PASS: frontend JavaScript and Zig-backed session/run controls");
+assert.ok(html.includes('id="run-gpu" class="primary" type="button">Compile &amp; Run HLSL'),"HLSL compile/run button must be enabled.");
+console.log("PASS: frontend scripts, browser WGSL lab, and enabled HLSL compile/run controls");
