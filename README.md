@@ -10,9 +10,9 @@ Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, an
 
 ## Run the HLSL compute client on Windows (v1.5.0)
 
-**[Download the Windows HLSL client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.5.1.zip)** · [Release notes, checksum and compiler tools](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.5.1)
+**[Download the Windows HLSL client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.5.2.zip)** · [Release notes, checksum and compiler tools](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.5.2)
 
-Extract the ZIP, double-click **Start-HLSL-Playground.cmd**, and use the new localhost browser tab. Click **Array example**, edit the HLSL code, then **Compile & Run HLSL**. The resulting buffer values are shown underneath. No Node, Zig or Rust installation is required.
+Extract the ZIP, double-click **Start-HLSL-Playground.cmd**, and use the new localhost browser tab. **For a visible shader result**, choose **Circle mask example** and click **Compile & Run HLSL**. The resulting GPU readback is displayed as a 2D mask heatmap with coverage statistics; other output buffers appear as scatter or bar charts. Click **Array example**, edit the HLSL code, then **Compile & Run HLSL**. The resulting buffer values are shown underneath. No Node, Zig or Rust installation is required.
 
 The client uses Windows PowerShell/.NET as an auditable **localhost compiler host**, Microsoft DXC to compile HLSL to SPIR-V, prebuilt Naga to generate WGSL, and browser WebGPU to execute compatible compute shaders. The local host stops after the final tab disconnects.
 
