@@ -130,7 +130,14 @@ jobs:
           # the actual bundled DXC and prebuilt Naga (not separate CLI calls).
           $hlsl = Get-Content -LiteralPath 'playground/particle-step.hlsl' -Raw
           $compileBody = @{ source = $hlsl; entry = 'CSMain' } | ConvertTo-Json -Compress
-          $compiled = Invoke-RestMethod -Uri "$($service.url)/api/compile" -Method Post -ContentType 'application/json' -Body $compileBody
+          try {
+            $compiled = Invoke-RestMethod -Uri "$($service.url)/api/compile" -Method Post -ContentType 'application/json' -Body $compileBody
+          } catch {
+            Write-Host '=== Zig backend compiler service diagnostics ==='
+            Get-ChildItem -LiteralPath $runtimeDir -File -Recurse -Filter '*.log' |
+              ForEach-Object { Write-Host $_.FullName; Get-Content -LiteralPath $_.FullName -Tail 100 }
+            throw
+          }
           if (-not $compiled.wgsl -or $compiled.wgsl -notmatch '@compute') {
             throw 'Zig backend failed to return converted compute WGSL'
           }
