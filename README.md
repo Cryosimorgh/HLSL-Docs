@@ -18,7 +18,9 @@ For now, open [the browser-only tutorial](playground/index.html) from a fresh so
 
 ## Browser-only GPU tutorial (current recommended path)
 
-1. Get the current source code using [Code → Download ZIP](https://github.com/Cryosimorgh/HLSL-Docs/archive/refs/heads/main.zip) and extract it.
+**[Download the clean browser-only v1.4.0 ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.4.0/HLSL-Playground-Browser-v1.4.0.zip)** · [Release notes and SHA-256](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.4.0)
+
+1. Download and extract the [v1.4.0 browser-only ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.4.0/HLSL-Playground-Browser-v1.4.0.zip), which contains no native executables.
 2. Open `playground/index.html` in a WebGPU-compatible browser.
 3. Edit the **WGSL** compute shader, change input numbers and click **Run WGSL on GPU**. This does not execute a local process or compile HLSL.
 4. Explore the independent JavaScript particle simulator and the HLSL reference panel.
