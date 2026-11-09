@@ -16,5 +16,5 @@ for(const id of ["code","bindings","run-gpu","close-playground","compile-status"
 }
 assert.ok(runner.includes("/api/compile"));
 assert.ok(runner.includes("/api/session/") && runner.includes('sessionCall("open")'));
-assert.ok(html.includes("zig-server.zig"));
+assert.ok(html.includes("Start-HLSL-Playground.cmd"), "The editor must point users to the one-click launcher.");
 console.log("PASS: frontend JavaScript and Zig-backed session/run controls");
