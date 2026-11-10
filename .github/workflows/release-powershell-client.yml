@@ -1,4 +1,4 @@
-name: Release PowerShell HLSL client v1.8.0
+name: Release PowerShell HLSL client v1.8.1
 on:
   push:
     branches: [main]
@@ -64,7 +64,7 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $out=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5'
-          $app=Join-Path $out 'HLSL-Playground-Windows-v1.8.0'
+          $app=Join-Path $out 'HLSL-Playground-Windows-v1.8.1'
           $toolOnly=Join-Path $out 'compiler-only'
           foreach ($dir in @($app,(Join-Path $app 'playground'),(Join-Path $app 'tools\dxc'),(Join-Path $app 'tools\naga'),(Join-Path $toolOnly 'tools\dxc'),(Join-Path $toolOnly 'tools\naga'))) {
             New-Item -ItemType Directory -Path $dir -Force | Out-Null
@@ -80,7 +80,7 @@ jobs:
               throw "Full Windows ZIP is missing required animation asset: $asset"
             }
           }
-          foreach ($name in @('Start-HLSL-Playground.cmd','Start-HLSL-Playground.ps1','README-WINDOWS.txt','README.md','HLSL-Handbook.md','RELEASE_NOTES_v1.8.0.md','LICENSE','THIRD_PARTY_NOTICES.md')) {
+          foreach ($name in @('Start-HLSL-Playground.cmd','Start-HLSL-Playground.ps1','README-WINDOWS.txt','README.md','HLSL-Handbook.md','RELEASE_NOTES_v1.8.1.md','LICENSE','THIRD_PARTY_NOTICES.md')) {
             Copy-Item -LiteralPath $name -Destination $app
           }
           Copy-Item -LiteralPath 'docs' -Destination $app -Recurse
@@ -96,8 +96,8 @@ jobs:
           Copy-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'naga.exe') -Destination (Join-Path $toolOnly 'tools\naga\naga.exe')
           $actual=@(Get-ChildItem -LiteralPath $app -Recurse -File -Filter '*.exe' | Select-Object -ExpandProperty Name)
           if(@($actual | Where-Object { $_ -notin @('dxc.exe','naga.exe') }).Count -ne 0) { throw 'Unexpected executable! Custom server not allowed' }
-          $appZip=Join-Path $out 'HLSL-Playground-Windows-v1.8.0.zip'
-          $toolsZip=Join-Path $out 'HLSL-CompilerTools-v1.8.0.zip'
+          $appZip=Join-Path $out 'HLSL-Playground-Windows-v1.8.1.zip'
+          $toolsZip=Join-Path $out 'HLSL-CompilerTools-v1.8.1.zip'
           Compress-Archive -LiteralPath $app -DestinationPath $appZip -CompressionLevel Optimal
           Compress-Archive -LiteralPath (Join-Path $toolOnly 'tools') -DestinationPath $toolsZip -CompressionLevel Optimal
           @($appZip,$toolsZip) | ForEach-Object {
@@ -107,7 +107,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          $app=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5\HLSL-Playground-Windows-v1.8.0'
+          $app=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5\HLSL-Playground-Windows-v1.8.1'
           & (Join-Path $app 'Start-HLSL-Playground.ps1') -NoBrowser
           $ready=Get-ChildItem -LiteralPath $env:TEMP -Directory -Filter 'hlsl-playground-run-*' |
             Sort-Object LastWriteTime -Descending |
@@ -159,8 +159,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference='Stop'
-          gh release view v1.8.0 *> $null
-          if($LASTEXITCODE -eq 0) { throw 'v1.8.0 already exists' }
+          gh release view v1.8.1 *> $null
+          if($LASTEXITCODE -eq 0) { throw 'v1.8.1 already exists' }
           $out=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5'
-          gh release create v1.8.0 (Join-Path $out 'HLSL-Playground-Windows-v1.8.0.zip') (Join-Path $out 'HLSL-CompilerTools-v1.8.0.zip') (Join-Path $out 'SHA256SUMS.txt') --target $env:GITHUB_SHA --title 'HLSL Workbench v1.8.0 — Manifestless HLSL RGBA Animation' --notes-file RELEASE_NOTES_v1.8.0.md
+          gh release create v1.8.1 (Join-Path $out 'HLSL-Playground-Windows-v1.8.1.zip') (Join-Path $out 'HLSL-CompilerTools-v1.8.1.zip') (Join-Path $out 'SHA256SUMS.txt') --target $env:GITHUB_SHA --title 'HLSL Workbench v1.8.1 — Fixed Browser Startup and HLSL Animation' --notes-file RELEASE_NOTES_v1.8.1.md
           if($LASTEXITCODE -ne 0) { throw 'Release publish failed' }
