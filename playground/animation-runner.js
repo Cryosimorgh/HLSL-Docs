@@ -104,7 +104,12 @@
     const g=api.gridConfig(spec);
     const count=spec.resources.some(r=>r.preset==="grid")?
       g.width*g.height:window.HLSLPlayground.config().count;
-    const dispatch=spec.dispatch==="auto"?[Math.ceil(count/size[0]),1,1]:spec.dispatch;
+    const dispatch=spec.dispatch==="auto"?
+      spec.autoFramebuffer?
+        [Math.ceil(spec.resources[0].visualize.grid.width/size[0]),
+         Math.ceil(spec.resources[0].visualize.grid.height/size[1]),1]:
+        [Math.ceil(count/size[0]),1,1]:
+      spec.dispatch;
     if(dispatch.some(n=>!Number.isInteger(n)||n<1||n>1024))
       throw Error("Invalid dispatch size for animation.");
     const adapter=await navigator.gpu.requestAdapter();
@@ -155,7 +160,7 @@
       const s={
         device,pipeline,bindGroup,dispatch,allocations,readback,inspect,
         uniform:a,config:animation,initialPhase,phase:initialPhase,
-        source,manifestText,frameCount:0,elapsed:0,raf:0,lastTs:0,
+        source,manifestText,autoFramebuffer:!!spec.autoFramebuffer,frameCount:0,elapsed:0,raf:0,lastTs:0,
         running:false,inFlight:false,stopping:false,disposed:false,
         lastMeasured:0,countSinceMeasured:0
       };
@@ -183,8 +188,14 @@
       s.phase+=dt*s.config.speed;
       s.elapsed+=dt;
       const uniform=s.uniform.initial.slice();
-      new DataView(uniform.buffer,uniform.byteOffset,uniform.byteLength)
-        .setFloat32(s.config.component*4,s.phase,true);
+      const values=new DataView(uniform.buffer,uniform.byteOffset,uniform.byteLength);
+      values.setFloat32(s.config.component*4,s.phase,true);
+      if(s.autoFramebuffer){
+        // WorkbenchFrame (b7) is defined in HLSL: Time, DeltaTime, Width,
+        // Height, Frame. All source-controlled except host timing itself.
+        values.setFloat32(4,dt,true);
+        values.setFloat32(16,s.frameCount+1,true);
+      }
       s.device.queue.writeBuffer(s.uniform.buffer,0,uniform);
       const encoder=s.device.createCommandEncoder();
       const pass=encoder.beginComputePass();
@@ -245,7 +256,7 @@
   }
   async function start(){
     if(starting)return;
-    if(current&&(current.source!==api.editor.value||current.manifestText!==api.manifestArea.value)){
+    if(current&&(current.source!==api.editor.value||(!current.autoFramebuffer&&current.manifestText!==api.manifestArea.value))){
       stop(); // Rebuild when user changes shader or resource configuration.
     }
     if(current){
@@ -271,7 +282,7 @@
   }
   async function step(){
     if(starting)return;
-    if(current&&(current.source!==api.editor.value||current.manifestText!==api.manifestArea.value))stop();
+    if(current&&(current.source!==api.editor.value||(!current.autoFramebuffer&&current.manifestText!==api.manifestArea.value)))stop();
     if(!current){
       await start();
       if(!current)return;
