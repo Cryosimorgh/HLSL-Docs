@@ -62,6 +62,9 @@ try {
     assert.equal(await fetchedStatus(fetch(base+"/browser-gpu.js")),200);
     assert.equal(await fetchedStatus(fetch(base+"/gpu-visualizer.js")),200,"GPU renderer script must be served.");
     assert.equal(await fetchedStatus(fetch(base+"/hlsl-highlight.js")),200,"HLSL syntax coloring must load from localhost.");
+    for(const asset of ["hlsl-docs-data.js","hlsl-fold-docs.js","hlsl-reference.js","hlsl-reference.html"]){
+      assert.equal(await fetchedStatus(fetch(base+"/"+asset)),200,"Missing local HLSL documentation/folding asset: "+asset);
+    }
     assert.equal(await fetchedStatus(fetch(base+"/animation-runner.js")),200,"Animation engine must load from localhost.");
     assert.equal(await fetchedStatus(fetch(base+"/julia-loop.hlsl")),200,"Julia HLSL source must load from localhost.");
     assert.equal(await fetchedStatus(fetch(base+"/julia-rgba.hlsl")),200);
