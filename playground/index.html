@@ -62,7 +62,7 @@
             <button id="copy" type="button">Copy</button>
             <button id="download" type="button">Save .hlsl</button>
             <button id="trigger-completion" class="editor-mode-button" type="button" title="Show HLSL completions (Ctrl+Space)">Complete</button>
-            <span class="editor-help-hint">Ctrl+Space · F1 help</span>
+            <span class="editor-help-hint">Suggestions while typing · F1 help</span>
             <button id="fold-all" class="editor-mode-button" type="button">Fold all</button>
             <button id="unfold-all" class="editor-mode-button" type="button">Unfold all</button>
           </div>
@@ -71,6 +71,15 @@
         <div class="editor-frame">
           <pre id="code-highlight" class="code-highlight" aria-hidden="true"><code id="code-highlight-content"></code></pre>
           <textarea id="code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable HLSL compute shader source"></textarea>
+        </div>
+        <div class="editor-shortcuts" aria-label="HLSL editor keyboard and mouse shortcuts">
+          <span><kbd>Ctrl+Space</kbd> Complete</span>
+          <span><kbd>Ctrl+Shift+Space</kbd> Parameters</span>
+          <span><kbd>F1</kbd> Explain</span>
+          <span><kbd>Right-click symbol</kbd> Pin help</span>
+          <span><kbd>Esc</kbd> Close help</span>
+          <span><kbd>Ctrl+Alt+[ / ]</kbd> Fold / Unfold</span>
+          <span><kbd>Ctrl+Enter</kbd> Compile</span>
         </div>
         <details class="bindings-panel">
           <summary>Resource bindings &amp; dispatch <span class="pane-hint">legacy shaders / advanced</span></summary>
@@ -548,7 +557,11 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
 })();
 </script>
 <aside id="hlsl-help-tooltip" class="hlsl-help-tooltip" role="tooltip" aria-label="HLSL code documentation" hidden>
-  <div class="doc-tooltip-head"><strong id="hlsl-help-title"></strong><span>HLSL reference</span></div>
+  <div class="doc-tooltip-head">
+    <strong id="hlsl-help-title"></strong>
+    <span id="hlsl-help-pin-state">Hover or right-click to pin</span>
+    <button type="button" id="hlsl-help-close" class="hlsl-help-close" aria-label="Close HLSL help">×</button>
+  </div>
   <p><b>What</b> <span id="hlsl-help-what"></span></p>
   <p><b>Does</b> <span id="hlsl-help-does"></span></p>
   <p><b>Use</b> <span id="hlsl-help-use"></span></p>
