@@ -8,9 +8,9 @@ Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, an
 
 > Independent learning resource; **not official Microsoft documentation**. Focus: modern Direct3D 12 + DXC + SM6.x. Differences for D3D11/FXC and newer hardware features are explicitly marked. Last reviewed: **9 November 2026**.
 
-## HLSL Workbench for Windows (v1.8.1)
+## HLSL Workbench for Windows (v1.8.2)
 
-**[Download the complete Windows HLSL Workbench v1.8.1 ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.8.1/HLSL-Playground-Windows-v1.8.1.zip)** · [Release notes and checksums](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.8.1)
+**[Download the complete Windows HLSL Workbench v1.8.2 ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.8.2/HLSL-Playground-Windows-v1.8.2.zip)** · [Release notes and checksums](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.8.2)
 
 Extract the ZIP in a clean folder and double-click **Start-HLSL-Playground.cmd**. No Rust, Zig or Node installation is required. The localhost PowerShell/.NET host uses included Microsoft DXC and prebuilt Naga to compile compatible HLSL to WebGPU WGSL.
 
