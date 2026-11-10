@@ -124,12 +124,8 @@ function drawRGBA(ctx,v,count,opts){
     throw Error("HLSL Framebuffer dimensions do not match GPU output byte length.");
   const m=setup(ctx,"HLSL RGBA framebuffer",w/h);
   const bright=new Float32Array(count);
-  let pixels=null,bitmap=null,off=null;
-  if(typeof document.createElement==="function"&&typeof ctx.drawImage==="function"){
-    bitmap=document.createElement("canvas");bitmap.width=w;bitmap.height=h;
-    off=bitmap.getContext("2d");
-    if(off?.createImageData)pixels=off.createImageData(w,h);
-  }
+  const raster=rasterFor(w,h,ctx);
+  const pixels=raster?.image||null,bitmap=raster?.canvas||null,off=raster?.context||null;
   for(let i=0;i<count;i++){
     const j=i*4;
     const r=clamp(finite(v[j])?v[j]:0,0,1);
