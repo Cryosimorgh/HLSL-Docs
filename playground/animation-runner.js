@@ -319,63 +319,34 @@
   document.addEventListener("visibilitychange",()=>{
     if(document.hidden&&current?.running)pause();
   });
-  // This preset is self-contained: avoids manual 128×128 data JSON.
-  function loadJulia(){
+
+  // Source file is the authority for dimensions, GPU color, and time usage.
+  // No animation resource JSON is required or accepted in this mode.
+  const builtins={
+    julia:"// Pure HLSL animated Julia fractal with its OWN RGB colors.\n// The Workbench auto-detects Framebuffer:u0, WorkbenchFrame:b7 and defines.\n// No animation manifest or input-position buffer is required.\n#define WORKBENCH_WIDTH 256\n#define WORKBENCH_HEIGHT 256\ncbuffer WorkbenchFrame : register(b7)\n{\n    float Time;\n    float DeltaTime;\n    float Width;\n    float Height;\n    float Frame;\n    float Padding0;\n    float Padding1;\n    float Padding2;\n};\nRWStructuredBuffer<float4> Framebuffer : register(u0);\n\nfloat3 FractalColor(float t)\n{\n    float3 a = float3(0.02f, 0.04f, 0.10f);\n    float3 b = float3(0.04f, 0.45f, 0.68f);\n    float3 c = float3(1.00f, 0.55f, 0.20f);\n    float3 d = float3(1.00f, 0.90f, 0.62f);\n    float3 lower = lerp(a, b, smoothstep(0.0f, 0.4f, t));\n    float3 upper = lerp(c, d, smoothstep(0.55f, 1.0f, t));\n    return lerp(lower, upper, smoothstep(0.35f, 0.75f, t));\n}\n\n[numthreads(8, 8, 1)]\nvoid CSMain(uint3 tid : SV_DispatchThreadID)\n{\n    if (tid.x >= WORKBENCH_WIDTH || tid.y >= WORKBENCH_HEIGHT) return;\n    uint i = tid.y * WORKBENCH_WIDTH + tid.x;\n    float2 uv = (float2(tid.xy) + 0.5f) /\n                float2(WORKBENCH_WIDTH, WORKBENCH_HEIGHT);\n\n    float2 z = (uv - 0.5f) * 3.1f;\n    float2 c = float2(-0.745f + 0.18f * cos(Time * 0.32f),\n                       0.186f + 0.14f * sin(Time * 0.23f));\n    uint n = 0u;\n    float m2 = 0.0f;\n    [loop]\n    for (uint k = 0u; k < 110u; ++k)\n    {\n        m2 = dot(z, z);\n        if (m2 > 256.0f) break;\n        z = float2(z.x*z.x - z.y*z.y, 2.0f*z.x*z.y) + c;\n        ++n;\n    }\n    float escaped = (float)n / 110.0f;\n    float3 rgb = FractalColor(saturate(pow(escaped, 0.55f)));\n    if (n == 110u) rgb = float3(0.008f, 0.014f, 0.026f);\n    Framebuffer[i] = float4(saturate(rgb), 1.0f);\n}\n",
+    particles:"// Pure HLSL GPU-rendered moving particles.\n// Each pixel receives its RGB color from this shader, NOT from JavaScript.\n// Particles follow independent triangular-wave bouncing trajectories.\n// This is a procedural visual demo, not an inter-particle collision solver.\n#define WORKBENCH_WIDTH 256\n#define WORKBENCH_HEIGHT 256\ncbuffer WorkbenchFrame : register(b7)\n{\n    float Time;\n    float DeltaTime;\n    float Width;\n    float Height;\n    float Frame;\n    float Padding0;\n    float Padding1;\n    float Padding2;\n};\nRWStructuredBuffer<float4> Framebuffer : register(u0);\n\nfloat Hash(float x) { return frac(sin(x * 127.1f) * 43758.5453f); }\nfloat2 Bounce(float2 v) { return 1.0f - abs(frac(v) * 2.0f - 1.0f); }\n\n[numthreads(8, 8, 1)]\nvoid CSMain(uint3 tid : SV_DispatchThreadID)\n{\n    if (tid.x >= WORKBENCH_WIDTH || tid.y >= WORKBENCH_HEIGHT) return;\n    uint i = tid.y * WORKBENCH_WIDTH + tid.x;\n    float2 uv = (float2(tid.xy) + 0.5f) /\n                float2(WORKBENCH_WIDTH, WORKBENCH_HEIGHT);\n\n    float3 rgb = float3(0.009f, 0.016f, 0.028f);\n    float2 coord = uv;\n    for (uint p = 0u; p < 24u; ++p)\n    {\n        float k = float(p) + 1.0f;\n        float2 start = float2(Hash(k * 1.3f), Hash(k * 2.1f));\n        float2 velocity = float2(0.08f + 0.10f*Hash(k*3.7f),\n                                  0.07f + 0.11f*Hash(k*4.3f));\n        float2 pos = 0.08f + 0.84f *\n          Bounce(start + Time * velocity * float2(1.0f, 1.2f));\n        float2 diff = coord - pos;\n        float d2 = dot(diff, diff);\n        float radius = 0.010f + 0.009f * Hash(k*5.3f);\n        float core = 1.0f - smoothstep(radius*0.6f, radius, sqrt(d2));\n        float halo = exp(-d2 / (radius*radius*9.0f)) * 0.22f;\n        float3 particle = float3(\n            0.30f + 0.70f*Hash(k*6.7f),\n            0.35f + 0.65f*Hash(k*7.7f),\n            0.42f + 0.58f*Hash(k*8.7f)\n        );\n        rgb += particle * (core + halo);\n    }\n    Framebuffer[i] = float4(saturate(rgb), 1.0f);\n}\n"
+  };
+  function loadBuiltin(which){
     stop();
-    api.setActivePreset("example-julia");
-    api.editor.value=[
-      "// Animated Julia set. Phase (b0 float0) advances each GPU frame.",
-      "// Each pixel runs the complex recurrence z = z² + c.",
-      "cbuffer JuliaSettings : register(b0) {",
-      "    float Phase;",
-      "    float Zoom;",
-      "    float PanX;",
-      "    float PanY;",
-      "};",
-      "StructuredBuffer<float4> Input : register(t0);",
-      "RWStructuredBuffer<float4> Output : register(u0);",
-      "[numthreads(64, 1, 1)]",
-      "void CSMain(uint3 tid : SV_DispatchThreadID) {",
-      "    uint i = tid.x;",
-      "    if (i >= 16384u) return;",
-      "    float2 uv = Input[i].xy;",
-      "    float2 z = (uv - float2(0.5f,0.5f)) * (3.0f / max(Zoom,0.01f))",
-      "             + float2(PanX,PanY);",
-      "    float2 c = float2(-0.745f + 0.13f * cos(Phase*0.33f),",
-      "                       0.186f + 0.12f * sin(Phase*0.27f));",
-      "    uint iterations = 0u;",
-      "    [loop]",
-      "    for (uint n=0u; n<100u; ++n) {",
-      "        if (dot(z,z)>16.0f) break;",
-      "        z=float2(z.x*z.x-z.y*z.y,2.0f*z.x*z.y)+c;",
-      "        iterations++;",
-      "    }",
-      "    Output[i]=float4(uv,(float)iterations/100.0f,1.0f);",
-      "}"
-    ].join("\n");
+    const isJulia=which==="julia";
+    api.setActivePreset(isJulia?"example-julia":"restore-example");
+    api.editor.value=builtins[which];
     api.editor.dataset.dirty="1";
     window.HLSLHighlight?.refresh();
-    const grid={width:128,height:128,xMax:1,yMax:1};
     api.manifestArea.value=JSON.stringify({
-      entry:"CSMain",dispatch:"auto",
-      animation:{binding:32,component:0,speed:1,fps:30},
-      resources:[
-        {binding:0,access:"read",preset:"grid",grid},
-        {binding:16,access:"read_write",byteLength:"grid",inspect:true,
-         display:"vec4",applyToCanvas:false,
-         visualize:{mode:"grid-fractal",grid,channel:2}},
-        {binding:32,access:"uniform",dataType:"f32",data:[0,1,0,0]}
-      ]
+      note:"Frame data and the RGBA GPU output are inferred from HLSL. No animation manifest required.",
+      mode:"source-controlled"
     },null,2);
     window.HLSLGPUVisualize.clear();
     resetMetrics();
-    api.results.textContent="Julia animation ready. Click Animate for continuous real GPU frames.";
-    setStatus("Julia set loaded · press Animate. HLSL is compiled only once.");
+    api.results.textContent="Ready: HLSL defines Framebuffer:u0 (RGBA) and WorkbenchFrame:b7 (time). Click Animate.";
+    setStatus((isJulia?"Julia fractal":"Moving colored particles")+
+      " ready · GPU colors and motion are computed in HLSL.");
   }
+  function loadJulia(){loadBuiltin("julia");}
+  function loadParticles(){loadBuiltin("particles");}
   $("example-julia").addEventListener("click",loadJulia);
-  window.HLSLAnimation={stop,pause,start,step,reset,loadJulia};
+  window.HLSLAnimation={stop,pause,start,step,reset,loadJulia,loadParticles};
   updateUI();
-  // Make continuous animation the default, without starting a GPU process
-  // until the user explicitly requests it.
   loadJulia();
 })();
