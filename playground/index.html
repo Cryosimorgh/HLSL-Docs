@@ -46,7 +46,7 @@
         <button id="example-julia" class="preset-button" type="button" aria-pressed="true">Julia animation</button>
         <button id="example-circle" class="preset-button" type="button" aria-pressed="false">Circle mask</button>
         <button id="example-scale" class="preset-button" type="button" aria-pressed="false">Array transform</button>
-        <button id="restore-example" class="preset-button" type="button" aria-pressed="false">Particles</button>
+        <button id="restore-example" class="preset-button" type="button" aria-pressed="false">GPU particles</button>
       </div>
     </div>
 
@@ -65,8 +65,8 @@
           <textarea id="code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable HLSL compute shader source"></textarea>
         </div>
         <details class="bindings-panel">
-          <summary>Resource bindings &amp; dispatch <span class="pane-hint">JSON / advanced</span></summary>
-          <p class="muted">t0 → 0 · u0 → 16 · b0 → 32. Edit input data, output layout and dispatch dimensions.</p>
+          <summary>Resource bindings &amp; dispatch <span class="pane-hint">legacy shaders / advanced</span></summary>
+          <p class="muted">Full-color Framebuffer HLSL shaders automatically use u0 and b7; no JSON animation manifest is needed. Older buffer-oriented examples still use this manual JSON panel.</p>
           <label class="sr-only" for="bindings">JSON buffer layout and dispatch</label>
           <textarea id="bindings" spellcheck="false" aria-label="JSON buffer layout and dispatch"></textarea>
         </details>
@@ -92,7 +92,7 @@
       <section class="preview-surface" aria-label="Shader output and GPU visualization">
         <div class="pane-header">
           <div class="pane-label">Output</div>
-          <div class="pane-hint">READBACK / BUFFER 16</div>
+          <div class="pane-hint">REAL GPU PIXELS / u0</div>
         </div>
         <div class="preview-stage">
           <div id="gpu-preview-empty" class="preview-empty">
