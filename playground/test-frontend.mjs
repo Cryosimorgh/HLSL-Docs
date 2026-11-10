@@ -11,6 +11,7 @@ const browserGpu=await readFile(root+"browser-gpu.js","utf8");
 const visualizer=await readFile(root+"gpu-visualizer.js","utf8");
 const hlslHighlight=await readFile(root+"hlsl-highlight.js","utf8");
 const folds=await readFile(root+"hlsl-fold-docs.js","utf8");
+const intellisense=await readFile(root+"hlsl-intellisense.js","utf8");
 const docsData=await readFile(root+"hlsl-docs-data.js","utf8");
 const docsReference=await readFile(root+"hlsl-reference.js","utf8");
 const docsPage=await readFile(root+"hlsl-reference.html","utf8");
@@ -18,6 +19,7 @@ const css=await readFile(root+"workbench.css","utf8");
 new vm.Script(visualizer,{filename:"gpu-visualizer.js"});
 new vm.Script(hlslHighlight,{filename:"hlsl-highlight.js"});
 new vm.Script(folds,{filename:"hlsl-fold-docs.js"});
+new vm.Script(intellisense,{filename:"hlsl-intellisense.js"});
 new vm.Script(docsData,{filename:"hlsl-docs-data.js"});
 new vm.Script(docsReference,{filename:"hlsl-reference.js"});
 new vm.Script(browserGpu,{filename:"browser-gpu.js"});
@@ -41,14 +43,16 @@ for(const id of ["wgsl-code","wgsl-input","wgsl-output","wgsl-run","wgsl-reset"]
 assert.ok(html.includes('src="browser-gpu.js"'));
 assert.ok(html.includes('src="gpu-visualizer.js"'));
 assert.ok(html.includes('src="hlsl-highlight.js"'),"HLSL syntax mirror script missing");
-for(const filename of ["hlsl-docs-data.js","hlsl-fold-docs.js"]){
+for(const filename of ["hlsl-docs-data.js","hlsl-fold-docs.js","hlsl-intellisense.js"]){
   assert.ok(html.includes('src="'+filename+'"'),"Missing local fold/documentation script: "+filename);
   assert.ok(html.indexOf('src="'+filename+'"')<html.indexOf('src="live-runner.js"'),
     "Fold help must initialize before the shader presets are loaded.");
 }
 assert.ok(html.indexOf('src="hlsl-docs-data.js"')<html.indexOf('src="hlsl-fold-docs.js"'),
   "HLSL help data must load before hover/fold logic.");
-for(const id of ["fold-all","unfold-all",
+for(const id of ["fold-all","unfold-all","trigger-completion",
+  "hlsl-signature-help","hlsl-signature-name","hlsl-signature-code",
+  "hlsl-signature-argument","hlsl-signature-summary",
   "hlsl-help-tooltip","hlsl-help-title","hlsl-help-what","hlsl-help-does",
   "hlsl-help-use","hlsl-help-example","hlsl-help-link"]){
   assert.ok(html.includes('id="'+id+'"'),"Missing fold or hover control "+id);
@@ -65,12 +69,22 @@ assert.ok(!html.includes('id="code-sections"')&&!html.includes('id="toggle-code-
   "Detached fold cards and the old mode switch must not reappear.");
 assert.ok(!css.includes('.code-section>summary'),"Old stacked code-card styling must be removed.");
 for(const file of ["codemirror.js","codemirror.css","foldcode.js","foldgutter.js",
-                   "foldgutter.css","clike.js"]){
+                   "foldgutter.css","clike.js","show-hint.js","show-hint.css"]){
   assert.ok(html.includes('vendor/codemirror/'+file),"Offline editor asset missing in HTML: "+file);
 }
 assert.ok(html.indexOf('src="vendor/codemirror/codemirror.js"')<
     html.indexOf('src="hlsl-fold-docs.js"'),
     "CodeMirror core must load before the HLSL folding adapter.");
+assert.ok(html.indexOf('src="vendor/codemirror/show-hint.js"')<
+    html.indexOf('src="hlsl-intellisense.js"'),
+  "Autocomplete addon must load before its HLSL integration.");
+assert.ok(html.indexOf('src="hlsl-fold-docs.js"')<
+    html.indexOf('src="hlsl-intellisense.js"'),
+  "IntelliSense must attach after CodeMirror exists.");
+assert.ok(intellisense.includes('"Ctrl-Space"')&&intellisense.includes("symbolMap(source)"),
+  "HLSL completion needs keyboard trigger and source-defined symbol index.");
+assert.ok(css.includes(".CodeMirror-hints")&&css.includes(".hlsl-signature-help"),
+  "Autocomplete dropdown and signature assistance must have theme styling.");
 assert.ok(css.includes('.CodeMirror-foldgutter')&&css.includes('.CodeMirror-linenumber'),
   "Editor must show inline gutter arrows and line numbers.");
 
