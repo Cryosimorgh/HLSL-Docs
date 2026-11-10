@@ -8,6 +8,7 @@
 <title>HLSL Workbench — Compute Shader Lab</title>
 <link rel="stylesheet" href="vendor/codemirror/codemirror.css">
 <link rel="stylesheet" href="vendor/codemirror/foldgutter.css">
+<link rel="stylesheet" href="vendor/codemirror/show-hint.css">
 <link rel="stylesheet" href="workbench.css">
 </head>
 <body>
@@ -60,7 +61,8 @@
           <div class="editor-tools">
             <button id="copy" type="button">Copy</button>
             <button id="download" type="button">Save .hlsl</button>
-            <span class="editor-help-hint">Hover symbols · F1 for help</span>
+            <button id="trigger-completion" class="editor-mode-button" type="button" title="Show HLSL completions (Ctrl+Space)">Complete</button>
+            <span class="editor-help-hint">Ctrl+Space · F1 help</span>
             <button id="fold-all" class="editor-mode-button" type="button">Fold all</button>
             <button id="unfold-all" class="editor-mode-button" type="button">Unfold all</button>
           </div>
@@ -554,6 +556,11 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
   <pre class="doc-example"><code id="hlsl-help-example"></code></pre>
   <a id="hlsl-help-link" href="hlsl-reference.html" target="_blank" rel="noopener noreferrer">Open reference entry ↗</a>
 </aside>
+<aside id="hlsl-signature-help" class="hlsl-signature-help" role="status" aria-label="HLSL function parameters" hidden>
+  <div class="signature-head"><strong id="hlsl-signature-name"></strong><span id="hlsl-signature-argument"></span></div>
+  <code id="hlsl-signature-code"></code>
+  <p id="hlsl-signature-summary"></p>
+</aside>
 <script src="gpu-visualizer.js" defer></script>
 <script src="hlsl-highlight.js" defer></script>
 <script src="hlsl-docs-data.js" defer></script>
@@ -561,7 +568,9 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
 <script src="vendor/codemirror/clike.js" defer></script>
 <script src="vendor/codemirror/foldcode.js" defer></script>
 <script src="vendor/codemirror/foldgutter.js" defer></script>
+<script src="vendor/codemirror/show-hint.js" defer></script>
 <script src="hlsl-fold-docs.js" defer></script>
+<script src="hlsl-intellisense.js" defer></script>
 <script src="live-runner.js" defer></script>
 <script src="animation-runner.js" defer></script>
 <script src="browser-gpu.js" defer></script>
