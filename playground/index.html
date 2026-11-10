@@ -59,7 +59,10 @@
           </div>
         </div>
         <label class="sr-only" for="code">Editable HLSL compute shader source</label>
-        <textarea id="code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable HLSL compute shader source"></textarea>
+        <div class="editor-frame">
+          <pre id="code-highlight" class="code-highlight" aria-hidden="true"><code id="code-highlight-content"></code></pre>
+          <textarea id="code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable HLSL compute shader source"></textarea>
+        </div>
         <details class="bindings-panel">
           <summary>Resource bindings &amp; dispatch <span class="pane-hint">JSON / advanced</span></summary>
           <p class="muted">t0 → 0 · u0 → 16 · b0 → 32. Edit input data, output layout and dispatch dimensions.</p>
@@ -84,9 +87,9 @@
         <div class="preview-stage">
           <div id="gpu-preview-empty" class="preview-empty">
             <div class="preview-empty-inner">
-              <div class="empty-graphic" aria-hidden="true"></div>
-              <h3>No GPU result yet</h3>
-              <p>Choose an example and run it to see the actual output here.</p>
+              <div class="empty-graphic" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="5" width="24" height="22" rx="3"/><path d="M8 22l6-7 5 4 5-8"/></svg></div>
+              <h3>Run to preview output</h3>
+              <p>GPU results appear here after a successful dispatch.</p>
             </div>
           </div>
           <section id="gpu-visual-panel" class="gpu-visual-panel" aria-label="Actual GPU output visualization" hidden>
@@ -526,6 +529,7 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
 })();
 </script>
 <script src="gpu-visualizer.js" defer></script>
+<script src="hlsl-highlight.js" defer></script>
 <script src="live-runner.js" defer></script>
 <script src="browser-gpu.js" defer></script>
 </body>
