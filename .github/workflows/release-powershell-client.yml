@@ -68,6 +68,9 @@ jobs:
           foreach ($name in @('index.html','workbench.css','hlsl-highlight.js','live-runner.js','browser-gpu.js','gpu-visualizer.js','circle-mask.hlsl','particle-step.hlsl','server.ps1','README.md')) {
             Copy-Item -LiteralPath (Join-Path 'playground' $name) -Destination (Join-Path $app 'playground')
           }
+          if (-not (Test-Path -LiteralPath (Join-Path $app 'playground\hlsl-highlight.js'))) {
+            throw 'Full Windows ZIP must contain the HLSL syntax colorer'
+          }
           foreach ($name in @('Start-HLSL-Playground.cmd','Start-HLSL-Playground.ps1','README-WINDOWS.txt','README.md','HLSL-Handbook.md','RELEASE_NOTES_v1.6.1.md','LICENSE','THIRD_PARTY_NOTICES.md')) {
             Copy-Item -LiteralPath $name -Destination $app
           }
