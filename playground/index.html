@@ -43,7 +43,8 @@
       </div>
       <div class="preset-bar" role="group" aria-label="Load a shader example">
         <span class="preset-label">Load example</span>
-        <button id="example-circle" class="preset-button" type="button" aria-pressed="true">Circle mask</button>
+        <button id="example-julia" class="preset-button" type="button" aria-pressed="true">Julia animation</button>
+        <button id="example-circle" class="preset-button" type="button" aria-pressed="false">Circle mask</button>
         <button id="example-scale" class="preset-button" type="button" aria-pressed="false">Array transform</button>
         <button id="restore-example" class="preset-button" type="button" aria-pressed="false">Particles</button>
       </div>
@@ -72,8 +73,17 @@
         <div class="run-bar">
           <div class="run-controls">
             <button id="run-gpu" class="primary" type="button">Compile &amp; Run HLSL</button>
+            <button id="animate-gpu" class="minor-button" type="button">Animate</button>
+            <button id="pause-gpu" class="minor-button" type="button" disabled>Pause</button>
+            <button id="step-gpu" class="minor-button" type="button">Step</button>
+            <button id="reset-gpu" class="minor-button" type="button">Reset</button>
             <span class="run-hint">Ctrl + Enter</span>
             <label class="check-wgsl"><input type="checkbox" id="show-wgsl"> Show WGSL</label>
+          </div>
+          <div class="animation-stats" aria-label="Live HLSL GPU animation counters">
+            <span>FPS <strong id="animation-fps">—</strong></span>
+            <span>Frames <strong id="animation-frames">0</strong></span>
+            <span>Elapsed <strong id="animation-time">0.0 s</strong></span>
           </div>
           <p id="compile-status" role="status" aria-live="polite">Ready to compile.</p>
         </div>
@@ -531,6 +541,7 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
 <script src="gpu-visualizer.js" defer></script>
 <script src="hlsl-highlight.js" defer></script>
 <script src="live-runner.js" defer></script>
+<script src="animation-runner.js" defer></script>
 <script src="browser-gpu.js" defer></script>
 </body>
 </html>
