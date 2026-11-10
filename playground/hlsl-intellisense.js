@@ -154,7 +154,7 @@
     // Prefix is inside a line comment or quoted string; never suggest code.
     if(skipped.trimEnd().length<=from && /["']|\/\//.test(line.slice(0,from)))
       return {from,to:pos.ch,items:[]};
-    if(!manual&&!c.member&&!c.register&&!c.preproc&&c.prefix.length<2)
+    if(!manual&&!c.member&&!c.register&&!c.preproc&&c.prefix.length<1)
       return {from,to:pos.ch,items:[]};
     const symbols=getSymbols(source);
     let pool;
@@ -180,7 +180,7 @@
     }).sort((a,b)=>{
       const lhs=(kindRank[a.kind]??9),rhs=(kindRank[b.kind]??9);
       return lhs-rhs||a.name.localeCompare(b.name);
-    }).slice(0,28);
+    }).slice(0,manual?28:16);
     return {from,to:pos.ch,items,context:c};
   }
   // Parses the innermost open function call, counts its top-level comma
@@ -295,7 +295,7 @@
     delay=setTimeout(()=>{
       if(!cm.hasFocus()||cm.state.completionActive)return;
       complete(false);
-    },90);
+    },75);
   }
   editor.on("inputRead",queueCompletion);
   editor.on("cursorActivity",()=>{
