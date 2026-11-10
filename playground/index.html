@@ -534,7 +534,8 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
         }
     };
     reset();
-    updateShader();
+    // Legacy physics shader is only installed on explicit legacy selection.
+    // Do not overwrite a source-controlled Julia/particle RGBA shader during boot.
     requestAnimationFrame(frame);
 })();
 </script>
