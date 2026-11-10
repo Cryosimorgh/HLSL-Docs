@@ -4,7 +4,7 @@
 "use strict";
 const $ = id => document.getElementById(id);
 const panel=$("gpu-visual-panel"), canvas=$("gpu-visual"), summary=$("gpu-visual-summary"),
-      title=$("gpu-visual-title"), legend=$("gpu-visual-legend");
+      title=$("gpu-visual-title"), legend=$("gpu-visual-legend"), empty=$("gpu-preview-empty");
 const W=canvas.width, H=canvas.height;
 const finite=n=>Number.isFinite(n);
 const fmt=n=>finite(n)?Number(n.toPrecision(5)).toString():"non-finite";
@@ -12,7 +12,9 @@ const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const hasMaskSource=s=>/\bmask\b/i.test(s)&&/\bsmoothstep\s*\(/i.test(s);
 function clear(){
   panel.hidden=true;
+  if(empty)empty.hidden=false;
   summary.textContent="";
+  summary.classList?.remove("warning");
 }
 function stats(values) {
   let min=Infinity,max=-Infinity,sum=0,positive=0,valid=0;
@@ -26,28 +28,31 @@ function stats(values) {
 }
 function palette(t) {
   t=clamp(finite(t)?t:0,0,1);
-  // Dark slate = zero, bright aqua = one. Not a predicted circle overlay.
+  // Charcoal = zero; warm amber = one. Colors are derived only from GPU data.
   const c=x=>Math.round(x);
-  return "rgb("+c(25+72*t)+","+c(46+178*t)+","+c(70+133*t)+")";
+  return "rgb("+c(29+205*t)+","+c(39+147*t)+","+c(50+69*t)+")";
 }
-function setup(ctx,label) {
-  const m={left:55,top:36,width:W-82,height:H-92};
+function setup(ctx,label,worldAspect=1) {
+  // Match the plot's physical X/Y aspect ratio; never stretch circles.
+  const aspect=clamp(finite(worldAspect)&&worldAspect>0?worldAspect:1,0.2,5);
+  const available=Math.min(W-104,H-124);
+  const width=aspect>=1?available:available*aspect;
+  const height=aspect>=1?available/aspect:available;
+  const m={left:(W-width)/2,top:(H-height)/2-8,width,height};
   ctx.clearRect(0,0,W,H);
-  ctx.fillStyle="#091425";ctx.fillRect(0,0,W,H);
-  ctx.fillStyle="#0e2033";ctx.fillRect(m.left,m.top,m.width,m.height);
-  ctx.strokeStyle="#4c6176";ctx.lineWidth=1;
-  ctx.strokeRect(m.left,m.top,m.width,m.height);
-  ctx.fillStyle="#d3e6f4";ctx.font="15px system-ui,sans-serif";
-  ctx.fillText(label,m.left,m.top-12);
+  ctx.fillStyle="#10151c";ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#202936";ctx.fillRect(m.left,m.top,m.width,m.height);
+  ctx.strokeStyle="#455264";ctx.lineWidth=1;
+  ctx.strokeRect(m.left+.5,m.top+.5,m.width,m.height);
   return m;
 }
 function axes(ctx,m,xMax,yMax){
-  ctx.font="12px system-ui,sans-serif";
-  ctx.fillStyle="#b7cce0";
-  ctx.fillText("x = 0",m.left,H-30);
-  ctx.fillText("x = "+fmt(xMax),m.left+m.width-76,H-30);
-  ctx.fillText("y = 0",m.left-44,m.top+12);
-  ctx.fillText("y = "+fmt(yMax),m.left-52,m.top+m.height);
+  ctx.font="12px ui-monospace,Consolas,monospace";
+  ctx.fillStyle="#8897a7";
+  ctx.fillText("0",m.left,m.top+m.height+22);
+  ctx.fillText(fmt(xMax),Math.max(m.left,m.left+m.width-35),m.top+m.height+22);
+  ctx.fillText("0",Math.max(4,m.left-38),m.top+8);
+  ctx.fillText(fmt(yMax),Math.max(4,m.left-38),m.top+m.height);
 }
 function drawGrid(ctx, v, count, opts){
   const grid=opts.grid||{};
@@ -55,7 +60,8 @@ function drawGrid(ctx, v, count, opts){
   if(!Number.isInteger(gw)||!Number.isInteger(gh)||gw*gh!==count||gw<2||gh<2)
     throw Error("Grid visualization requires grid.width × grid.height to match GPU output sample count.");
   const channel=opts.channel??2;
-  const m=setup(ctx,"GPU circle mask · 2D grid");
+  const xMax=grid.xMax??1,yMax=grid.yMax??1;
+  const m=setup(ctx,"GPU circle mask · 2D grid",xMax/yMax);
   const values=[];
   for(let i=0;i<count;i++){
     const z=v[i*4+channel];
@@ -65,15 +71,15 @@ function drawGrid(ctx, v, count, opts){
           y=m.top+Math.floor(i/gw)*m.height/gh;
     ctx.fillRect(x,y,Math.ceil(m.width/gw)+0.25,Math.ceil(m.height/gh)+0.25);
   }
-  axes(ctx,m,grid.xMax??1,grid.yMax??1);
+  axes(ctx,m,xMax,yMax);
   const st=stats(values);
   return {st,kind:"mask",description:gw+"×"+gh+" GPU samples, displayed as image cells"};
 }
 function drawScatter(ctx,v,count,opts,maskMode,defaultXMax){
-  const m=setup(ctx,maskMode?"GPU circle mask · particle positions":"GPU float4 output · positions");
   const channel=opts.channel??2;
   const maxX=finite(opts.xMax)&&opts.xMax>0?opts.xMax:defaultXMax,
         maxY=finite(opts.yMax)&&opts.yMax>0?opts.yMax:1;
+  const m=setup(ctx,maskMode?"GPU mask · positions":"GPU float4 · positions",maxX/maxY);
   const values=[];
   const step=Math.max(1,Math.ceil(count/15000));
   for(let i=0;i<count;i++){
@@ -91,7 +97,7 @@ function drawScatter(ctx,v,count,opts,maskMode,defaultXMax){
 }
 function drawBars(ctx, v, kind){
   const values=Array.from(v), st=stats(values);
-  const m=setup(ctx,"GPU numeric output · bar chart");
+  const m=setup(ctx,"GPU numeric output · bar chart",1.4);
   const low=finite(st.min)?Math.min(0,st.min):0,
         high=finite(st.max)?Math.max(0,st.max):1;
   const range=high-low||1, count=values.length;
@@ -104,21 +110,22 @@ function drawBars(ctx, v, kind){
     const value=values[k*step];
     if(!finite(value))continue;
     const y=yFor(value);
-    ctx.fillStyle=value>=0?"#72d9bb":"#e8aa8b";
+    ctx.fillStyle=value>=0?"#e8bc75":"#df8b83";
     ctx.fillRect(m.left+k*barW+0.5,Math.min(y,zero),Math.max(1,barW-1),Math.max(1,Math.abs(y-zero)));
   }
   ctx.fillStyle="#b7cce0";ctx.font="12px system-ui,sans-serif";
-  ctx.fillText("min "+fmt(st.min),m.left,H-30);
-  ctx.fillText("max "+fmt(st.max),m.left+m.width-104,H-30);
+  ctx.fillText("min "+fmt(st.min),m.left,m.top+m.height+28);
+  ctx.fillText("max "+fmt(st.max),m.left+m.width-108,m.top+m.height+28);
   return {st,kind:"scalar",description:count+" "+kind+" values; "+(step>1?"sampled every "+step+" entries":"all entries shown")};
 }
 function render({bytes,format,binding,visualize,source,worldWidth}) {
   panel.hidden=false;
+  if(empty)empty.hidden=true;
   const ctx=canvas.getContext("2d");
   if(!ctx)throw Error("Canvas 2D context unavailable for GPU output visualization.");
   let result,mode;
   const opts=visualize||{};
-  title.textContent="GPU output · binding "+binding;
+  title.textContent="Output · binding "+binding;
   if(format==="vec4"){
     if(bytes.byteLength%16)throw Error("float4 visualization requires 16-byte-aligned output.");
     const v=new Float32Array(bytes),count=v.length/4;
@@ -134,21 +141,30 @@ function render({bytes,format,binding,visualize,source,worldWidth}) {
     result=drawBars(ctx,v,format);
   }
   const {st,kind,description}=result;
-  const details=["Binding "+binding,description,
-    "min "+fmt(st.min),"max "+fmt(st.max),"mean "+fmt(st.mean)];
-  if(kind==="mask"){
-    details.push(st.positive+"/"+st.valid+" samples have mask ≥ 0.5");
-    if(st.valid>0&&st.positive===0)details.push(
-      "ALL MASKS ZERO — nothing lies inside the chosen circle. Increase its radius or use the 2D grid preset.");
-    if(st.valid>0&&st.positive===st.valid)details.push("All sampled points lie inside the mask.");
+  const set=(id,value)=>{const node=$(id);if(node)node.textContent=value;};
+  set("viz-samples",st.n.toLocaleString("en-US"));
+  set("viz-coverage",kind==="mask"&&st.valid?(100*st.positive/st.valid).toFixed(1)+"%":"—");
+  set("viz-range",fmt(st.min)+" – "+fmt(st.max));
+  set("viz-mean",fmt(st.mean));
+  summary.classList?.remove("warning");
+  if(kind==="mask") {
+    title.textContent="Circle mask · binding "+binding;
+    summary.textContent=st.positive+"/"+st.valid+" samples have mask ≥ 0.5";
+    if(st.valid>0&&st.positive===0) {
+      summary.textContent+=" · All masks zero. Increase radius or adjust sample positions.";
+      summary.classList?.add("warning");
+    }else if(st.valid>0&&st.positive===st.valid) {
+      summary.textContent+=" · All samples are inside.";
+    }
+  }else summary.textContent=description;
+  if(st.valid!==st.n) {
+    summary.textContent+=" · "+(st.n-st.valid)+" non-finite values";
+    summary.classList?.add("warning");
   }
-  if(st.valid!==st.n)details.push((st.n-st.valid)+" non-finite channel values");
-  summary.textContent=details.join(" · ");
-  legend.textContent=kind==="mask"
-    ?"Dark = mask 0 (outside) · Aqua = mask 1 (inside) · Intermediate colors = smooth edge"
-    :kind==="channel"
-    ?"Color maps float4.z (0 dark → 1 aqua); z is not necessarily a mask"
-    :"Aqua = positive · Salmon = negative · Horizontal line = zero";
+  legend.textContent=kind==="mask"?
+    "0 — outside · 1 — inside · Amber — positive mask":
+    kind==="channel"?"XY position · color represents channel "+(opts.channel??2):
+    "Above baseline: amber · Below baseline: red";
   return result;
 }
 window.HLSLGPUVisualize={render,clear,stats,hasMaskSource};
