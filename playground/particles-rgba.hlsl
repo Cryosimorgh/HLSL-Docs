@@ -17,7 +17,16 @@ cbuffer WorkbenchFrame : register(b7)
 };
 RWStructuredBuffer<float4> Framebuffer : register(u0);
 
-float Hash(float x) { return frac(sin(x * 127.1f) * 43758.5453f); }
+float Hash(float x)
+{
+    uint u = asuint(x);
+    u ^= u >> 16u;
+    u *= 0x7feb352du;
+    u ^= u >> 15u;
+    u *= 0x846ca68bu;
+    u ^= u >> 16u;
+    return float(u & 0x00ffffffu) / 16777215.0f;
+}
 float2 Bounce(float2 v) { return 1.0f - abs(frac(v) * 2.0f - 1.0f); }
 
 [numthreads(8, 8, 1)]
@@ -41,8 +50,8 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
         float2 diff = coord - pos;
         float d2 = dot(diff, diff);
         float radius = 0.010f + 0.009f * Hash(k*5.3f);
-        float core = 1.0f - smoothstep(radius*0.6f, radius, sqrt(d2));
-        float halo = exp(-d2 / (radius*radius*9.0f)) * 0.22f;
+        float core = 1.0f - smoothstep(radius*radius*0.36f, radius*radius, d2);
+        float halo = (1.0f - smoothstep(radius*radius, radius*radius*9.0f, d2)) * 0.22f;
         float3 particle = float3(
             0.30f + 0.70f*Hash(k*6.7f),
             0.35f + 0.65f*Hash(k*7.7f),
