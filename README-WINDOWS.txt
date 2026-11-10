@@ -1,16 +1,19 @@
-HLSL Playground v1.7.0 — one-click Windows client
+HLSL Playground v1.8.0 — one-click Windows client
 
 HOW TO RUN
-1. Download HLSL-Playground-Windows-v1.7.0.zip from
-   https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.7.0
+1. Download HLSL-Playground-Windows-v1.8.0.zip from
+   https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.8.0
 2. Extract the entire ZIP to a new folder.
 3. Double-click Start-HLSL-Playground.cmd.
    The editor supports syntax coloring while retaining regular text editing.
 4. The launcher starts a localhost server using the Windows PowerShell/.NET
    runtime already included in Windows. A browser tab opens automatically.
-5. The "Julia animation" preset loads automatically. Click "Animate" to see the GPU
-   fractal change continuously next to the editor. Pause, Step, Reset and Resume are available.
-   Alternatively, choose "Circle mask" or "Array transform" for static tests.
+5. The "Julia animation" preset loads automatically. Click "Animate" to
+   see continuously changing GPU-generated RGB fractal pixels.
+   Select "GPU particles" then "Animate" for 24 moving colored particles
+   generated directly by HLSL. Pause, Step, Reset and Resume are available.
+   The shader writes float4(red, green, blue, alpha) pixels to Framebuffer:u0.
+   No animation JSON manifest is required for either of these examples.
    The host uses DXC + Naga to generate WGSL, and WebGPU runs it on your GPU.
 6. Close the tab or press Close playground to stop the local server.
 
@@ -29,7 +32,8 @@ simulation, which work without a local compilation server.
 
 LIMITS
 This is a supported-compute-subset playground, not any arbitrary HLSL GPU
-program. Custom buffer layouts require matching resource JSON. Browser
+program. Framebuffer HLSL automatically configures u0 and b7 from source.
+Other custom buffer layouts may still require resource JSON. Browser
 WebGPU support depends on graphics drivers and settings.
 
 TROUBLESHOOTING
