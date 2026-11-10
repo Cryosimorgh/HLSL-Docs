@@ -57,6 +57,7 @@ try {
     assert.match(await page.text(),/HLSL Workbench/);
     assert.equal((await fetch(base+"/browser-gpu.js")).status,200);
     assert.equal((await fetch(base+"/gpu-visualizer.js")).status,200,"GPU renderer script must be served.");
+    assert.equal((await fetch(base+"/hlsl-highlight.js")).status,200,"HLSL syntax coloring must load from localhost.");
     const css=await fetch(base+"/workbench.css");
     assert.equal(css.status,200,"Workbench stylesheet must be served.");
     assert.match(css.headers.get("content-type")||"",/text\/css/);
