@@ -66,8 +66,11 @@ assert.ok(names(matches("// smooth")).length===0,
   "Never autocomplete identifiers inside line comments.");
 assert.ok(names(matches('float s = "smoo')).length===0,
   "Never autocomplete identifiers inside strings.");
-assert.equal(engine.suggest(shader+"\na",{line:shader.split("\n").length,ch:1},false).items.length,0,
-  "A single character should not flood automatic completions.");
+const automatic=engine.suggest(shader+"\na",{line:shader.split("\n").length,ch:1},false);
+assert.ok(automatic.items.length>0&&automatic.items.length<=16,
+  "First typed identifier should show a bounded automatic suggestion list.");
+assert.ok(automatic.items.some(x=>x.name==="abs"||x.name==="all"),
+  "Automatic suggestions should include relevant HLSL built-ins.");
 const builtInCall=shader+"\nfloat x = smoothstep(0.1f, ";
 const arg=engine.signatureAt(builtInCall,{line:shader.split("\n").length,
   ch:builtInCall.split("\n").at(-1).length});
