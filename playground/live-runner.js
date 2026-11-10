@@ -358,7 +358,7 @@ editor.addEventListener("keydown",e=>{
   }
 });
 function setActivePreset(which){
-  for(const id of ["example-circle","example-julia","example-rgba-particles","example-scale","restore-example"])
+  for(const id of ["example-circle","example-julia","example-scale","restore-example"])
     $(id).setAttribute("aria-pressed",String(id===which));
 }
 $("restore-example").addEventListener("click",()=>{
