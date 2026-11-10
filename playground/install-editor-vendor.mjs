@@ -9,11 +9,16 @@ const root=fileURLToPath(new URL(".",import.meta.url));
 const temp=await mkdtemp(join(tmpdir(),"cm5-pinned-"));
 const version="5.65.21";
 try {
-  execFileSync(process.platform==="win32"?"npm.cmd":"npm",[
-    "install", "--prefix",temp, "--no-save","--ignore-scripts",
-    "--no-audit","--no-fund","--package-lock=false",
-    "codemirror@"+version
-  ],{stdio:"inherit",timeout:120000});
+  const args=["install","--prefix",temp,"--no-save","--ignore-scripts",
+    "--no-audit","--no-fund","--package-lock=false","codemirror@"+version];
+  if(process.platform==="win32"){
+    // Node 22 Windows cannot spawn .cmd directly with execFileSync.
+    execFileSync("cmd.exe",["/d","/s","/c",
+      "npm "+args.map(x=>'"'+x.replace(/"/g,'')+'"').join(" ")
+    ],{stdio:"inherit",timeout:120000});
+  }else{
+    execFileSync("npm",args,{stdio:"inherit",timeout:120000});
+  }
   const src=join(temp,"node_modules","codemirror");
   const out=join(root,"vendor","codemirror");
   await mkdir(out,{recursive:true});
