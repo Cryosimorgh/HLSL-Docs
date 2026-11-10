@@ -1,12 +1,12 @@
 # Interactive HLSL Compute Playground
 
-**[Download the Windows v1.6.1 client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.6.1.zip)** · [Handbook](../README.md) · [Compute shader source](particle-step.hlsl)
+**[Download the Windows v1.7.0 client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.7.0.zip)** · [Handbook](../README.md) · [Compute shader source](particle-step.hlsl)
 
 ## Run real HLSL on Windows
 
-1. Extract the **entire** Windows v1.6.1 ZIP into a new folder.
+1. Extract the **entire** Windows v1.7.0 ZIP into a new folder.
 2. Double-click **Start-HLSL-Playground.cmd** at the root of that folder.
-3. The launcher starts a loopback-only **PowerShell/.NET** compiler bridge and opens your browser to `http://127.0.0.1:<port>/`. Use this new tab, not a `file://` tab. The **Circle mask** preset is loaded automatically.
+3. The launcher starts a loopback-only **PowerShell/.NET** compiler bridge and opens your browser to `http://127.0.0.1:<port>/`. Use this new tab, not a `file://` tab. The **Julia animation** preset is loaded automatically.
 4. Click **Compile & Run HLSL** or press **Ctrl+Enter** in the editor. The 2D GPU mask is shown directly alongside the code. Select **Array transform** to try scalar output.
 5. Expand **Resource bindings & dispatch** to edit the circle center/radius, then rerun. Raw outputs and generated WGSL are available in the collapsed output inspectors. The separate particle and WGSL labs are under **Other labs**.
 6. Close the tab or click **Close playground & stop server**. The local host exits when the last connected playground tab closes. If the browser crashes, a heartbeat timeout closes it automatically.
@@ -50,6 +50,26 @@ The mask example uses an explicit `EdgeWidth` instead of `fwidth()` because the 
 ## Editor highlighting and preview controls
 
 The HLSL editor colors known types, keywords, comments, numbers, functions, resources, registers and variable identifiers without requiring IntelliSense or any editor download. The editable source remains a native textarea; the syntax layer is only visual. The GPU plot uses a larger area with less empty padding while preserving correct X/Y geometry. Collapsed sections use chevrons, not add/remove icons.
+
+## Continuous HLSL animation (new in v1.7.0)
+
+The **Julia animation** preset is ready on startup. Press **Animate** to compile HLSL once and repeatedly dispatch it through WebGPU. This is not a static image or a simulated JavaScript replay.
+
+**Pause** freezes future dispatches, **Step** submits one new GPU dispatch, **Resume** uses the same GPU pipeline, and **Reset** restores the initial uniform values and persistent buffers. FPS and frame counts describe completed GPU readback frames (not a hardware GPU timestamp benchmark). The preview is updated from `GPUBuffer.mapAsync` each frame. Background tabs pause automatically.
+
+The Julia preset generates 128×128 input positions, uses a bounded 100-iteration `z = z² + c` loop per GPU thread, and evolves the Julia constant from a float32 **Phase** uniform. The shader source is `julia-loop.hlsl`. Its resource manifest includes:
+
+~~~json
+{
+  "animation": { "binding": 32, "component": 0, "speed": 1, "fps": 30 }
+}
+~~~
+
+You can set the animation rate to 15, 24, 30 or 60 target FPS. This is a target, not a guaranteed throughput. Any compatible HLSL compute shader can use this mechanism if it has a float32 time/phase uniform at the specified binding/component and that uniform actually affects the output. Ordinary static shaders will not animate merely by being dispatched again.
+
+The GPU buffers persist during animation, but there is no automatic input/output ping-pong for iterative simulation algorithms yet. The current preview reads the output back to the CPU every frame, so very large grids may be slower than GPU-only rendering.
+
+For a single diagnostic dispatch, press **Compile & Run HLSL** instead; it remains supported.
 
 ## What happens when you click Run
 
@@ -99,4 +119,4 @@ Opening `playground/index.html` directly without the launcher provides the JavaS
 
 The repository's Windows CI runs `node playground/test-powershell.mjs` **only as a test client**, including real DXC/Naga compilation through the PowerShell HTTP API. Users do not need Node.
 
-[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.6.1.md)
+[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.7.0.md)
