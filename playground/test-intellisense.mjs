@@ -51,9 +51,8 @@ assert.ok(names(matches("smoo")).includes("smoothstep"),"HLSL intrinsics must co
 assert.ok(names(matches("float")).includes("float3"),"Vector types should be suggested.");
 assert.ok(names(matches("cb")).includes("cbuffer"),"HLSL declarations should be suggested.");
 const swizzle=names(matches("rgb.r"));
-assert.ok(swizzle.includes("rgb")&&swizzle.includes("rgba"),
-  "HLSL float3 should offer rgb swizzles.");
-assert.ok(!swizzle.includes("rgba")===false || swizzle.includes("rgb"));
+assert.ok(swizzle.includes("rgb")&&!swizzle.includes("rgba"),
+  "HLSL float3 offers rgb, but not 4-component rgba swizzles.");
 assert.ok(!names(matches("rgb.xy")).includes("xyzw"),"float3 must not offer 4D swizzles.");
 const three=names(matches("tid."));
 assert.ok(three.includes("xyz")&&!three.includes("w"),"uint3 swizzles should be 3D.");
