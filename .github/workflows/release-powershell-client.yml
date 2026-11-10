@@ -18,7 +18,7 @@ jobs:
       - name: Test editor and local HTTP API
         shell: pwsh
         run: |
-          # Include the full fold/docs frontend and validate the PowerShell server.
+          # Ship offline HLSL help and validate its assets in the extracted portable client.
           node playground/test-frontend.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Frontend test failed' }
           node playground/test-gpu-visualizer.mjs
