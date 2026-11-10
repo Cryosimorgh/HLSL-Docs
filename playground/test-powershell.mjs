@@ -64,6 +64,8 @@ try {
     assert.equal(await fetchedStatus(fetch(base+"/hlsl-highlight.js")),200,"HLSL syntax coloring must load from localhost.");
     assert.equal(await fetchedStatus(fetch(base+"/animation-runner.js")),200,"Animation engine must load from localhost.");
     assert.equal(await fetchedStatus(fetch(base+"/julia-loop.hlsl")),200,"Julia HLSL source must load from localhost.");
+    assert.equal(await fetchedStatus(fetch(base+"/julia-rgba.hlsl")),200);
+    assert.equal(await fetchedStatus(fetch(base+"/particles-rgba.hlsl")),200);
     const css=await fetch(base+"/workbench.css");
     assert.equal(css.status,200,"Workbench stylesheet must be served.");
     assert.match(css.headers.get("content-type")||"",/text\/css/);
@@ -88,7 +90,7 @@ try {
     assert.equal(invalid.status,400);
     await invalid.arrayBuffer();
     if(integration){
-        for(const name of ["particle-step.hlsl","circle-mask.hlsl","julia-loop.hlsl"]){
+        for(const name of ["particle-step.hlsl","circle-mask.hlsl","julia-loop.hlsl","julia-rgba.hlsl","particles-rgba.hlsl"]){
             const shader=await readFile(join(folder,name),"utf8");
             const response=await post("/api/compile",{source:shader,entry:"CSMain"});
             if(response.status!==200) throw Error(name+" failed: "+await response.text());
