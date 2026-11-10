@@ -10,6 +10,20 @@ const finite=n=>Number.isFinite(n);
 const fmt=n=>finite(n)?Number(n.toPrecision(5)).toString():"non-finite";
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const hasMaskSource=s=>/\bmask\b/i.test(s)&&/\bsmoothstep\s*\(/i.test(s);
+// Reuse large offscreen image buffers across successive GPU frames.
+const rasters=new Map();
+function rasterFor(w,h,ctx){
+  if(typeof document.createElement!=="function"||typeof ctx.drawImage!=="function")return null;
+  const key=w+"x"+h;
+  if(rasters.has(key))return rasters.get(key);
+  const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+  const context=canvas.getContext("2d");
+  const image=context?.createImageData?.(w,h);
+  if(!image)return null;
+  if(rasters.size>=2)rasters.clear();
+  const raster={canvas,context,image};rasters.set(key,raster);
+  return raster;
+}
 function clear(){
   panel.hidden=true;
   if(empty)empty.hidden=false;
