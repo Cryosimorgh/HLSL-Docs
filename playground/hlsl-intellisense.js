@@ -284,7 +284,7 @@
     const candidate=suggest(editor.getValue(),position,force);
     if(!candidate.items.length)return;
     editor.showHint({hint:hintFunction,completeSingle:false,
-      closeOnUnfocus:true,alignWithWord:true});
+      completeOnSingleClick:true,closeOnUnfocus:true,alignWithWord:true});
   }
   function queueCompletion(cm,change){
     if(change.origin!=="+input")return;
