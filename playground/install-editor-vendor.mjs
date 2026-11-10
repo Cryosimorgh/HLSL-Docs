@@ -3,7 +3,7 @@
 import {execFileSync} from "node:child_process";
 import {cp,mkdtemp,mkdir,rm,readFile} from "node:fs/promises";
 import {tmpdir} from "node:os";
-import {join} from "node:path";
+import {join,dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 const root=fileURLToPath(new URL(".",import.meta.url));
 const temp=await mkdtemp(join(tmpdir(),"cm5-pinned-"));
@@ -12,10 +12,9 @@ try {
   const args=["install","--prefix",temp,"--no-save","--ignore-scripts",
     "--no-audit","--no-fund","--package-lock=false","codemirror@"+version];
   if(process.platform==="win32"){
-    // Node 22 Windows cannot spawn .cmd directly with execFileSync.
-    execFileSync("cmd.exe",["/d","/s","/c",
-      "npm "+args.map(x=>'"'+x.replace(/"/g,'')+'"').join(" ")
-    ],{stdio:"inherit",timeout:120000});
+    // Execute npm's JS CLI directly via Node, avoiding .cmd quoting/EINVAL.
+    const npmCli=join(dirname(process.execPath),"node_modules","npm","bin","npm-cli.js");
+    execFileSync(process.execPath,[npmCli,...args],{stdio:"inherit",timeout:120000});
   }else{
     execFileSync("npm",args,{stdio:"inherit",timeout:120000});
   }
