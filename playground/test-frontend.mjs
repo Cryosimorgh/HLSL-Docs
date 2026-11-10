@@ -8,8 +8,10 @@ const html=await readFile(root+"index.html","utf8");
 const runner=await readFile(root+"live-runner.js","utf8");
 const browserGpu=await readFile(root+"browser-gpu.js","utf8");
 const visualizer=await readFile(root+"gpu-visualizer.js","utf8");
+const hlslHighlight=await readFile(root+"hlsl-highlight.js","utf8");
 const css=await readFile(root+"workbench.css","utf8");
 new vm.Script(visualizer,{filename:"gpu-visualizer.js"});
+new vm.Script(hlslHighlight,{filename:"hlsl-highlight.js"});
 new vm.Script(browserGpu,{filename:"browser-gpu.js"});
 const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .filter(m=>!m[0].includes("src="));
@@ -29,6 +31,8 @@ for(const id of ["wgsl-code","wgsl-input","wgsl-output","wgsl-run","wgsl-reset"]
 }
 assert.ok(html.includes('src="browser-gpu.js"'));
 assert.ok(html.includes('src="gpu-visualizer.js"'));
+assert.ok(html.includes('src="hlsl-highlight.js"'),"HLSL syntax mirror script missing");
+assert.ok(html.indexOf('src="hlsl-highlight.js"')<html.indexOf('src="live-runner.js"'),"Highlighter must load before preset initialization");
 assert.ok(html.includes('href="workbench.css"'),"Missing workbench styles.");
 assert.ok(html.indexOf('src="gpu-visualizer.js"')<html.indexOf('src="live-runner.js"'),
   "The GPU visualization must load before the runner initializes the circle preset.");
@@ -38,6 +42,13 @@ assert.equal(ids.filter(id=>id==="wgsl-output").length,1);
 assert.ok(ids.includes("generated-wgsl"),"Generated WGSL needs its own dedicated panel.");
 assert.ok(html.includes('id="gpu-visual" width="640" height="640"'),"GPU chart must have square native resolution.");
 assert.ok(html.includes('class="workspace-grid"'),"Editor and preview should form one focused workbench.");
+assert.ok(html.includes('id="code-highlight"'),"Syntax mirror element missing");
+assert.ok(html.includes('id="code-highlight-content"'),"Syntax coloring content missing");
+assert.ok(css.includes(".tok-keyword")&&css.includes(".tok-identifier")&&css.includes(".tok-number"),"Token palette missing");
+assert.ok(css.includes("caret-color")&&css.includes("-webkit-text-fill-color:transparent"),"Native editor cursor/highlighting overlay missing");
+assert.ok(!html.includes('class="empty-graphic" aria-hidden="true"></div>'),"Old plus-sign empty state must not be retained");
+assert.ok(html.includes("Run to preview output"),"Empty state needs an actionable title");
+assert.ok(css.includes('content:"▸"')&&css.includes('content:"▾"'),"Disclosure chevrons must replace add/remove symbols");
 assert.ok(html.includes('<details id="debug-output-panel">'),"Raw output must be secondary, not the main result.");
 assert.ok(html.indexOf('id="code"')<html.indexOf('id="scene"'),"HLSL compute must precede the simulation lab.");
 assert.ok(css.includes(".workspace-grid")&&css.includes("@media(max-width:850px)"),
