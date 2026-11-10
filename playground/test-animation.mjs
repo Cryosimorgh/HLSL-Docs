@@ -42,7 +42,7 @@ const device={
       for(const cmd of cmds){
         for(const p of cmd.dispatches){
           dispatches++;
-          const b0=p.bindGroup.entries.find(e=>e.binding===32).resource.buffer;
+          const b0=p.bindGroup.entries.find(e=>e.binding===39).resource.buffer;
           const u0=p.bindGroup.entries.find(e=>e.binding===16).resource.buffer;
           const phase=new DataView(b0.bytes.buffer).getFloat32(0,true);
           phaseReadings.push(phase);
@@ -90,7 +90,19 @@ const win={
     isBridgeOrigin:true,
     setStatus:(...a)=>statuses.push(a),
     setActivePreset:id=>{node(id).pressed=true},
-    parseManifest:()=>JSON.parse(node("bindings").value),
+    parseManifest:()=>{
+      const src=node("code").value;
+      const w=Number(src.match(/#define WORKBENCH_WIDTH (\d+)/)?.[1]);
+      const h=Number(src.match(/#define WORKBENCH_HEIGHT (\d+)/)?.[1]);
+      if(!w||!h)throw Error("Missing HLSL framebuffer dimensions in test");
+      return {entry:"CSMain",dispatch:"auto",autoFramebuffer:true,
+        animation:{binding:39,component:0,speed:1,fps:30},
+        resources:[
+          {binding:16,access:"read_write",byteLength:w*h*16,inspect:true,
+           display:"vec4",visualize:{mode:"grid-rgba",grid:{width:w,height:h,xMax:w,yMax:h}}},
+          {binding:39,access:"uniform",dataType:"f32",data:[0,0,w,h,0,0,0,0]}
+        ]};
+    },
     bytesFor(r,spec){
       if(r.preset==="grid"){
         const g=r.grid,a=new Float32Array(g.width*g.height*4);
@@ -100,6 +112,7 @@ const win={
         }
         return new Uint8Array(a.buffer);
       }
+      if(typeof r.byteLength==="number")return new Uint8Array(r.byteLength);
       if(r.byteLength==="grid"){
         const g=spec.resources[0].grid;
         return new Uint8Array(g.width*g.height*16);
@@ -139,10 +152,13 @@ const context={
   cancelAnimationFrame:id=>callbacks.delete(id)
 };
 vm.runInNewContext(source,context,{filename:"animation-runner.js"});
-assert.match(node("code").value,/float Phase/);
-const spec=JSON.parse(node("bindings").value);
-assert.equal(spec.animation.binding,32);
-assert.equal(spec.resources[1].visualize.mode,"grid-fractal");
+assert.match(node("code").value,/float Time/);
+const spec=win.HLSLRunnerAPI.parseManifest();
+assert.equal(spec.animation.binding,39);
+assert.equal(spec.resources[0].visualize.mode,"grid-rgba");
+assert.equal(spec.autoFramebuffer,true);
+assert.ok(!JSON.parse(node("bindings").value).animation,"Animation manifest must not be required");
+
 const anim=win.HLSLAnimation;
 await anim.start();
 assert.equal(compileCalls,1,"HLSL compiled exactly once when starting animation");
@@ -179,4 +195,4 @@ anim.stop();
 await tick(400);
 assert.ok(destroyed>0,"Stopped animation must release GPU buffers/device");
 assert.equal(callbacks.size,0,"Stopped animation must cancel outstanding rAF callbacks");
-console.log("PASS animate: compile once, 3+ GPU dispatches, varying phase/readback, pause/step/resume/reset/cleanup");
+console.log("PASS manifestless HLSL animate: compile once, 3+ GPU dispatches, varying time/RGBA readback, pause/step/resume/reset/cleanup");
