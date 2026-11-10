@@ -169,7 +169,7 @@ try{
   const editing=await evaluate(`(() => {
     const view=window.HLSLFoldDocs.editor;
     const before=view.getValue();
-    view.replaceRange("// LIVE EDIT VIA CODEMIRROR\n",{line:0,ch:0});
+    view.replaceRange("// LIVE EDIT VIA CODEMIRROR\\n",{line:0,ch:0});
     const changed=view.getValue();
     return {
       changed:changed.startsWith("// LIVE EDIT VIA CODEMIRROR"),
