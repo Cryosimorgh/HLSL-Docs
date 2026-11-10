@@ -21,7 +21,9 @@ for(const id of ["code","bindings","run-gpu","close-playground","compile-status"
 }
 assert.ok(runner.includes("/api/compile"));
 assert.ok(runner.includes("/api/session/") && runner.includes('sessionCall("open")'));
-assert.ok(html.includes("Start-HLSL-Playground.cmd"), "The editor must point users to the one-click launcher.");
+assert.ok(html.includes('href="README.md"'), "Workbench must link to setup instructions.");
+const docs=await readFile(root+"README.md","utf8");
+assert.ok(docs.includes("Start-HLSL-Playground.cmd"), "Setup guide must identify the Windows launcher.");
 for(const id of ["wgsl-code","wgsl-input","wgsl-output","wgsl-run","wgsl-reset"]) {
     assert.ok(html.includes('id="'+id+'"'),"Missing standalone GPU teaching control: "+id);
 }
