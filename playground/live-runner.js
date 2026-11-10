@@ -362,6 +362,7 @@ function setActivePreset(which){
     $(id).setAttribute("aria-pressed",String(id===which));
 }
 $("restore-example").addEventListener("click",()=>{
+  if(window.HLSLAnimation?.loadParticles){window.HLSLAnimation.loadParticles();return;}
   window.HLSLAnimation?.stop();
   setActivePreset("restore-example");
   editor.dataset.dirty="";
