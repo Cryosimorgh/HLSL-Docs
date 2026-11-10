@@ -6,7 +6,7 @@ import vm from "node:vm";
 const script=await readFile(fileURLToPath(new URL("./hlsl-highlight.js",import.meta.url)),"utf8");
 const listeners={};
 const editor={
-  value:"#define COUNT 64\ncbuffer Params : register(b0) {\n  float4 Color;\n};\n// <script>alert(1)</script>\n[numthreads(64, 1, 1)]\nvoid CSMain(uint3 tid : SV_DispatchThreadID) {\n  float mask = smoothstep(0.1, 0.8, length(Color.xy));\n  Output[tid.x] = float4(mask, 0, 0, 1);\n}",
+  value:"#define COUNT 64\ncbuffer Params : register(b0) {\n  float4 Color;\n};\nStructuredBuffer<float4> Input : register(t0);\n// <script>alert(1)</script>\n[numthreads(64, 1, 1)]\nvoid CSMain(uint3 tid : SV_DispatchThreadID) {\n  float mask = smoothstep(0.1, 0.8, length(Color.xy));\n  Output[tid.x] = float4(mask, 0, 0, 1);\n}",
   scrollTop:10,scrollLeft:4,
   addEventListener:(event,cb)=>{listeners[event]=cb}
 };
