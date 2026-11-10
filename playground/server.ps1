@@ -64,7 +64,13 @@ function Send-Bytes {
     'X-Content-Type-Options: nosniff' + $crlf + $crlf)
   $h = [Text.Encoding]::ASCII.GetBytes($header)
   $Stream.Write($h,0,$h.Length)
-  if($Bytes.Length) { $Stream.Write($Bytes,0,$Bytes.Length) }
+  # Write large generated WGSL responses in bounded chunks.
+  $offset=0
+  while($offset -lt $Bytes.Length){
+    $size=[Math]::Min(8192,$Bytes.Length-$offset)
+    $Stream.Write($Bytes,$offset,$size)
+    $offset+=$size
+  }
   $Stream.Flush()
 }
 function Send-Json {
