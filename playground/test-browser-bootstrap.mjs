@@ -198,11 +198,61 @@ try{
   assert.equal(reload.sourceRestored,true,"Switching presets must replace editor source.");
   assert.equal(reload.synchronized,true,"Preset swap must synchronize CodeMirror and compiler.");
   assert.equal(reload.foldable,true,"Folding gutter must work after preset replacement.");
+  const completion=await evaluate(`(() => {
+    const view=window.HLSLFoldDocs.editor;
+    const api=window.HLSLIntelliSense;
+    const result={attached:!!api};
+    if(!api)return result;
+    const last=view.lastLine(),end=view.getLine(last).length;
+    view.replaceRange("\\nfloat result = smoo",{line:last,ch:end});
+    view.setCursor(view.lastLine(),view.getLine(view.lastLine()).length);
+    api.complete();
+    result.open=api.popupOpen;
+    result.hasPopup=!!document.querySelector(".CodeMirror-hints");
+    result.hasSmoothstep=api.suggestions.some(item=>item.name==="smoothstep");
+    const option=[...document.querySelectorAll(".CodeMirror-hint")]
+      .find(el=>el.textContent.includes("smoothstep"));
+    result.optionVisible=!!option;
+    if(option){
+      option.click();
+      result.accepted=view.getValue().includes("float result = smoothstep()");
+      result.synced=view.getValue()===document.getElementById("code").value;
+      result.parameter=api.signature?.name;
+      result.argument=api.signature?.active;
+      result.signatureVisible=!document.getElementById("hlsl-signature-help").hidden;
+    }
+    return result;
+  })()`);
+  assert.equal(completion.attached,true,"HLSL IntelliSense did not attach to CodeMirror.");
+  assert.equal(completion.open,true,"Ctrl+Space completion model did not open.");
+  assert.equal(completion.hasPopup,true,"No real completion dropdown shown in Chromium.");
+  assert.equal(completion.hasSmoothstep,true,"Expected intrinsic in completion model.");
+  assert.equal(completion.optionVisible,true,"Expected intrinsic suggestion in actual DOM.");
+  assert.equal(completion.accepted,true,"Clicking completion did not insert function().");
+  assert.equal(completion.synced,true,"Accepted completion must update the compiled HLSL source.");
+  assert.equal(completion.parameter,"smoothstep","Function signature help missing after completion.");
+  assert.equal(completion.argument,0,"Signature help should start at argument 1.");
+  assert.equal(completion.signatureVisible,true,"Function signature tooltip must be visible.");
+
+  const localCompletion=await evaluate(`(() => {
+    const ed=window.HLSLFoldDocs.editor,api=window.HLSLIntelliSenseEngine;
+    const result=api.suggest(ed.getValue()+"\\nFractalC",{line:ed.lineCount(),ch:8},true);
+    const names=result.items.map(x=>x.name);
+    const vec=api.suggest(ed.getValue()+"\\nfloat3 shade;\\nshade.r",
+      {line:ed.lineCount()+1,ch:7},true);
+    return {hasLocal:names.includes("FractalColor"),
+      hasRgb:vec.items.some(x=>x.name==="rgb"),
+      hasRgba:vec.items.some(x=>x.name==="rgba")};
+  })()`);
+  assert.equal(localCompletion.hasLocal,true,"User-defined function should be suggested.");
+  assert.equal(localCompletion.hasRgb,true,"float3 member completion should suggest rgb.");
+  assert.equal(localCompletion.hasRgba,false,"float3 member completion must not invent rgba.");
+
   const reference=await fetch(url+"hlsl-reference.html");
   assert.equal(reference.status,200);
   assert.match(await reference.text(),/HLSL quick reference/);
   assert.deepEqual(failures,[],"Uncaught browser exceptions during startup and preset switching.");
-  console.log("PASS Chromium: presets, in-editor gutter folds, hover HLSL docs, separate examples, CodeMirror edits, full-source compilation and no uncaught exceptions.");
+  console.log("PASS Chromium: presets, in-editor gutter folds, hover HLSL docs, separate examples, CodeMirror edits, completion, function signatures and full-source compilation and no uncaught exceptions.");
 }finally{
   try{socket?.close()}catch{}
   try{child.kill()}catch{}
