@@ -93,12 +93,24 @@ try {
     const invalid=await post("/api/compile",{source:'#include "/etc/passwd"',entry:"CSMain"});
     assert.equal(invalid.status,400);
     await invalid.arrayBuffer();
+    async function compileVerified(source){
+      for(let attempt=0;attempt<3;attempt++){
+        let response;
+        try{
+          response=await post("/api/compile",{source,entry:"CSMain"});
+          const body=await response.text();
+          if(response.status!==200)throw Error("DXC/Naga compilation rejected: "+body);
+          return JSON.parse(body);
+        }catch(error){
+          if(error.message.startsWith("DXC/Naga compilation rejected:")||attempt===2)throw error;
+          await new Promise(resolve=>setTimeout(resolve,100*(attempt+1)));
+        }
+      }
+    }
     if(integration){
         for(const name of ["particle-step.hlsl","circle-mask.hlsl","julia-loop.hlsl","julia-rgba.hlsl","particles-rgba.hlsl"]){
             const shader=await readFile(join(folder,name),"utf8");
-            const response=await post("/api/compile",{source:shader,entry:"CSMain"});
-            if(response.status!==200) throw Error(name+" failed: "+await response.text());
-            const converted=await response.json();
+            const converted=await compileVerified(shader);
             assert.match(converted.wgsl,/@compute/);
             assert.equal(converted.mapping.u0,16);
             assert.equal(converted.cacheHit,false,"First compilation must run real tools");
@@ -106,15 +118,11 @@ try {
             console.log("PASS real DXC + Naga conversion:",name);
         }
         const shader=await readFile(join(folder,"julia-rgba.hlsl"),"utf8");
-        const repeat=await post("/api/compile",{source:shader,entry:"CSMain"});
-        assert.equal(repeat.status,200);
-        const cached=await repeat.json();
+        const cached=await compileVerified(shader);
         assert.equal(cached.cacheHit,true,"Identical HLSL must reuse DXC/Naga translation");
         assert.equal(cached.compileMs,0,"Cache hit must skip compiler processes");
         assert.match(cached.wgsl,/@compute/);
-        const changed=await post("/api/compile",{source:shader+"\n// cache invalidation",entry:"CSMain"});
-        assert.equal(changed.status,200);
-        const recompiled=await changed.json();
+        const recompiled=await compileVerified(shader+"\n// cache invalidation");
         assert.equal(recompiled.cacheHit,false,"Edited HLSL must invalidate compilation cache");
         console.log("PASS compiler cache hit/invalidation:",cached.cacheHit,recompiled.cacheHit);
     }
