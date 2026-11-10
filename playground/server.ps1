@@ -196,7 +196,8 @@ function Handle-Connection {
   $stream=$null
   try {
     $Client.ReceiveTimeout=8000
-    $Client.SendTimeout=8000
+    $Client.SendTimeout=30000
+    $Client.NoDelay=$true
     $stream=$Client.GetStream()
     try {$request=Read-Http $stream}
     catch {
