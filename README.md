@@ -8,13 +8,13 @@ Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, an
 
 > Independent learning resource; **not official Microsoft documentation**. Focus: modern Direct3D 12 + DXC + SM6.x. Differences for D3D11/FXC and newer hardware features are explicitly marked. Last reviewed: **9 November 2026**.
 
-## HLSL Workbench for Windows (v1.8.0)
+## HLSL Workbench for Windows (v1.8.1)
 
-**[Download the complete Windows HLSL Workbench v1.8.0 ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.8.0/HLSL-Playground-Windows-v1.8.0.zip)** · [Release notes and checksums](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.8.0)
+**[Download the complete Windows HLSL Workbench v1.8.1 ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.8.1/HLSL-Playground-Windows-v1.8.1.zip)** · [Release notes and checksums](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.8.1)
 
 Extract the ZIP in a clean folder and double-click **Start-HLSL-Playground.cmd**. No Rust, Zig or Node installation is required. The localhost PowerShell/.NET host uses included Microsoft DXC and prebuilt Naga to compile compatible HLSL to WebGPU WGSL.
 
-**Animate real HLSL pixels:** the default **Julia animation** preset and the **GPU particles** preset write actual per-pixel `float4(r,g,b,a)` values in HLSL. Click **Animate** for continuous WebGPU dispatch or **Compile & Run HLSL** for a single frame. The preview reads back and displays the GPU's RGB values directly; it does **not** assign colors from a JavaScript visualization palette. The GPU particles example uses procedural bouncing trajectories, not a colliding-particle physics solver.
+**Startup verified in Chromium:** the Julia shader now loads into the editor before any animation is started; choosing GPU particles switches to its own HLSL framebuffer source. **Animate real HLSL pixels:** the default **Julia animation** preset and the **GPU particles** preset write actual per-pixel `float4(r,g,b,a)` values in HLSL. Click **Animate** for continuous WebGPU dispatch or **Compile & Run HLSL** for a single frame. The preview reads back and displays the GPU's RGB values directly; it does **not** assign colors from a JavaScript visualization palette. The GPU particles example uses procedural bouncing trajectories, not a colliding-particle physics solver.
 
 In this self-contained framebuffer mode, no `animation` JSON manifest is needed: the workbench infers resolution and bindings from the HLSL `#define WORKBENCH_WIDTH/HEIGHT`, `RWStructuredBuffer<float4> Framebuffer : register(u0)` and `cbuffer WorkbenchFrame : register(b7)`. The host supplies frame time and repeatedly dispatches the compiled compute shader. HLSL itself does not control the browser's event loop. The older manual buffer-manifest examples remain available.
 
