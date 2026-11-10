@@ -12,6 +12,8 @@ on:
       - 'playground/circle-mask.hlsl'
       - 'playground/gpu-visualizer.js'
       - 'playground/test-powershell.mjs'
+      - 'playground/install-editor-vendor.mjs'
+      - 'playground/hlsl-intellisense.js'
       - 'Start-HLSL-Playground.ps1'
       - '.github/workflows/test-powershell-client.yml'
   workflow_dispatch:
@@ -28,6 +30,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install pinned offline editor assets for local HTTP tests
+        shell: pwsh
+        run: |
+          node playground/install-editor-vendor.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Offline editor preparation failed' }
       - name: Test server with Windows PowerShell 5.1
         shell: pwsh
         run: |
