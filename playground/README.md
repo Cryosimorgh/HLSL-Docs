@@ -1,16 +1,22 @@
 # HLSL Workbench — GPU Compute and Continuous Animation
 
-**[Download complete Windows Workbench v1.8.0](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.8.0/HLSL-Playground-Windows-v1.8.0.zip)** · [Release notes](../RELEASE_NOTES_v1.8.0.md) · [HLSL Handbook](../HLSL-Handbook.md)
+**[Download complete Windows Workbench v1.8.1](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.8.1/HLSL-Playground-Windows-v1.8.1.zip)** · [Release notes](../RELEASE_NOTES_v1.8.1.md) · [HLSL Handbook](../HLSL-Handbook.md)
 
 ## Run the Windows client
 
-1. Extract the **entire** v1.8.0 ZIP to a new folder.
+1. Extract the **entire** v1.8.1 ZIP to a new folder.
 2. Double-click **Start-HLSL-Playground.cmd**. The Windows PowerShell/.NET compiler host opens a localhost browser tab.
 3. Choose **Julia animation** (default) or **GPU particles**. Click **Animate** to see the shader change over time. Pause, Step, Reset and Resume control repeated WebGPU compute dispatches.
 4. Click **Compile & Run HLSL** for a single GPU frame. Output, source code, error diagnostics and generated WGSL are inspectable.
 5. Closing the final browser tab or ending the session stops the compiler host. Hidden tabs automatically pause animation.
 
 No Node, Zig or Rust installation is required; the full Windows ZIP includes DXC and Naga. The previously quarantined Zig `hlsl-server.exe` is neither bundled nor launched.
+
+## Verify the startup source
+
+v1.8.1 fixes a critical v1.8.0 startup error where a nonexistent preset-button ID prevented the Julia shader from loading. On startup the editor must show `#define WORKBENCH_WIDTH 256` and `RWStructuredBuffer<float4> Framebuffer : register(u0)`. If you see the old `struct Ball` shader, you are using an outdated browser tab or package. Use a fresh v1.8.1 extraction and the new tab opened by its CMD launcher.
+
+A real Chromium test now checks this on every frontend change, including switching between Julia and GPU particles and preserving the editor when the independent JavaScript sandbox settings change.
 
 ## Pure-HLSL-defined pixels and animation
 
@@ -91,7 +97,7 @@ The mask example uses an explicit `EdgeWidth` instead of `fwidth()` because the 
 
 The HLSL editor colors known types, keywords, comments, numbers, functions, resources, registers and variable identifiers without requiring IntelliSense or any editor download. The editable source remains a native textarea; the syntax layer is only visual. The GPU plot uses a larger area with less empty padding while preserving correct X/Y geometry. Collapsed sections use chevrons, not add/remove icons.
 
-## Continuous HLSL animation (new in v1.8.0)
+## Continuous HLSL animation (new in v1.8.1)
 
 The **Julia animation** preset is ready on startup. Press **Animate** to compile HLSL once and repeatedly dispatch it through WebGPU. This is not a static image or a simulated JavaScript replay.
 
@@ -159,4 +165,4 @@ Opening `playground/index.html` directly without the launcher provides the JavaS
 
 The repository's Windows CI runs `node playground/test-powershell.mjs` **only as a test client**, including real DXC/Naga compilation through the PowerShell HTTP API. Users do not need Node.
 
-[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.8.0.md)
+[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.8.1.md)
