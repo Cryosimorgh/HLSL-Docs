@@ -29,7 +29,7 @@ const ps=spawn("powershell.exe",[
     "-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass",
     "-File",script,"-Port",String(port),"-DxcPath",dxc,"-NagaPath",naga,
     "-SiteRoot",folder,"-ReadyFile",ready,
-    "-StartupGraceMs","9000","-LeaseTimeoutMs","8000","-ExitDelayMs","600"
+    " -StartupGraceMs","60000","-LeaseTimeoutMs","15000","-ExitDelayMs","600"
 ],{windowsHide:true,stdio:["ignore","pipe","pipe"]});
 let stderr="",stdout="";
 ps.stderr.on("data",x=>stderr+=String(x));
