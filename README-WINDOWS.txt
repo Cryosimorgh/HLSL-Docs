@@ -1,14 +1,19 @@
-HLSL Playground v1.9.0 — one-click Windows client
+HLSL Playground v1.9.1 — one-click Windows client
 
 HOW TO RUN
-1. Download HLSL-Playground-Windows-v1.9.0.zip from
-   https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.9.0
+1. Download HLSL-Playground-Windows-v1.9.1.zip from
+   https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.9.1
 2. Extract the entire ZIP to a new folder.
 3. Double-click Start-HLSL-Playground.cmd.
    The HLSL editor has line numbers and VS Code-style fold arrows in its
    gutter. Click an arrow to collapse a function or buffer IN PLACE.
    Use Fold all / Unfold all. Hover float4, cbuffer or RWStructuredBuffer
    for short HLSL help and a separate example block.
+   HLSL code suggestions appear automatically while typing.
+   Shortcuts are listed directly beneath the code editor. Right-click a
+   documented symbol to pin readable, selectable HLSL help. Esc closes it.
+   Repeat compilations of unchanged code reuse an in-memory compiler cache.
+   The animation shows measured compile, GPU/readback and draw times.
    Press Ctrl+Space (or Complete) for code suggestions. The client recognizes
    HLSL types, built-ins, variables and functions in the current shader.
    Function calls show parameter hints; Ctrl+Shift+Space requests them.
@@ -27,7 +32,7 @@ HOW TO RUN
 VERIFY THE CORRECT CLIENT
 - The first HLSL lines should include #define WORKBENCH_WIDTH 256.
 - They should NOT begin with // Sample host cbuffer values or struct Ball.
-- If you see the old physics shader, close the tab, extract v1.9.0 in a
+- If you see the old physics shader, close the tab, extract v1.9.1 in a
   fresh folder, and run that folder's CMD file.
 
 NO INSTALLATION NEEDED
