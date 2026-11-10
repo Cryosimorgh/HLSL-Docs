@@ -1,0 +1,31 @@
+name: Browser startup and manifestless animation regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'playground/index.html'
+      - 'playground/live-runner.js'
+      - 'playground/animation-runner.js'
+      - 'playground/gpu-visualizer.js'
+      - 'playground/test-browser-bootstrap.mjs'
+      - '.github/workflows/test-browser-bootstrap.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chromium-boot:
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Load real HTML and deferred scripts in Chrome or Edge
+        shell: pwsh
+        run: |
+          node playground/test-browser-bootstrap.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Browser startup regression failed' }
