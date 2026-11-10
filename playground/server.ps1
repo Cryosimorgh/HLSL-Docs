@@ -27,6 +27,11 @@ $everOpened = $false
 $startedMs = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $lastEmpty = $startedMs
 $maxBody = 131072
+# Bounded in-memory cache: repeat runs of the same HLSL skip DXC/Naga.
+# Entries live only for this localhost session and are never persisted.
+$script:CompileCache = @{}
+$script:CompileCacheOrder = New-Object System.Collections.ArrayList
+$script:CompileCacheLimit = 4
 $static = @{
   '/' = @('index.html', 'text/html; charset=utf-8')
   '/index.html' = @('index.html', 'text/html; charset=utf-8')
@@ -177,6 +182,19 @@ function Compile-Hlsl {
   if($source -match '(?m)^\s*#\s*(include|include_next|import)\b') {
     throw 'Includes are disabled; paste dependencies into the editor'
   }
+  $hasher=[Security.Cryptography.SHA256]::Create()
+  try {
+    $hash=[BitConverter]::ToString($hasher.ComputeHash(
+      $utf8.GetBytes($entry+[char]0+$source))).Replace('-','')
+  } finally { $hasher.Dispose() }
+  if($script:CompileCache.ContainsKey($hash)) {
+    $hit=$script:CompileCache[$hash]
+    return @{
+      wgsl=$hit.wgsl;log=$hit.log;toolchain=$hit.toolchain
+      mapping=$hit.mapping;cacheHit=$true;compileMs=0;dxcMs=0;nagaMs=0
+    }
+  }
+  $timer=[Diagnostics.Stopwatch]::StartNew()
   $tmp=Join-Path $env:TEMP ('hlsl-playground-'+[guid]::NewGuid().ToString('N'))
   [IO.Directory]::CreateDirectory($tmp) | Out-Null
   try {
@@ -191,17 +209,29 @@ function Compile-Hlsl {
     ) $tmp
     if($dxc.Code -ne 0) { throw ('DXC: '+$dxc.Log) }
     if(-not [IO.File]::Exists($spirv)) { throw 'DXC produced no SPIR-V' }
+    $dxcMs=$timer.ElapsedMilliseconds
     $naga=Run-Tool $NagaPath @($spirv,$wgsl) $tmp
     if($naga.Code -ne 0) { throw ('Naga: '+$naga.Log) }
     if(-not [IO.File]::Exists($wgsl)) { throw 'Naga produced no WGSL' }
     $file=[System.IO.FileInfo]::new($wgsl)
     if($file.Length -lt 1 -or $file.Length -gt 524288) { throw 'WGSL output exceeded limit' }
-    return @{
-      wgsl=[IO.File]::ReadAllText($wgsl,$utf8)
+    $wgslText=[IO.File]::ReadAllText($wgsl,$utf8)
+    $compiled=@{
+      wgsl=$wgslText
       log=($dxc.Log + [string][char]10 + $naga.Log).Trim()
       toolchain='Windows PowerShell / Microsoft DXC / Naga / WebGPU'
       mapping=@{t0=0;u0=16;b0=32;s0=48}
+      cacheHit=$false;dxcMs=$dxcMs;nagaMs=($timer.ElapsedMilliseconds-$dxcMs)
+      compileMs=$timer.ElapsedMilliseconds
     }
+    $script:CompileCache[$hash]=$compiled
+    [void]$script:CompileCacheOrder.Add($hash)
+    while($script:CompileCacheOrder.Count -gt $script:CompileCacheLimit) {
+      $evict=[string]$script:CompileCacheOrder[0]
+      $script:CompileCacheOrder.RemoveAt(0)
+      $script:CompileCache.Remove($evict)
+    }
+    return $compiled
   } finally {
     Remove-Item -LiteralPath $tmp -Recurse -Force -ErrorAction SilentlyContinue
   }
