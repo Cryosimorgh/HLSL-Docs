@@ -21,6 +21,10 @@ await new Promise(ok=>socket.listen(0,"127.0.0.1",ok));
 const port=socket.address().port;
 await new Promise(ok=>socket.close(ok));
 const base="http://127.0.0.1:"+port;
+async function fetchedStatus(request){
+  const response=await request;
+  try{return response.status}finally{await response.arrayBuffer();}
+}
 const ps=spawn("powershell.exe",[
     "-NoProfile","-NonInteractive","-ExecutionPolicy","Bypass",
     "-File",script,"-Port",String(port),"-DxcPath",dxc,"-NagaPath",naga,
@@ -46,7 +50,7 @@ try {
     let readyOk=false;
     for(let i=0;i<100;i++){
         if(ps.exitCode!==null)break;
-        try {const r=await fetch(base+"/api/health");if(r.ok){readyOk=true;break;}}catch{}
+        try {const r=await fetch(base+"/api/health");await r.arrayBuffer();if(r.ok){readyOk=true;break;}}catch{}
         await sleep(100);
     }
     assert.ok(readyOk,"Server not ready: "+stderr+"\n"+stdout);
@@ -55,18 +59,20 @@ try {
     const page=await fetch(base+"/");
     assert.equal(page.status,200);
     assert.match(await page.text(),/HLSL Workbench/);
-    assert.equal((await fetch(base+"/browser-gpu.js")).status,200);
-    assert.equal((await fetch(base+"/gpu-visualizer.js")).status,200,"GPU renderer script must be served.");
-    assert.equal((await fetch(base+"/hlsl-highlight.js")).status,200,"HLSL syntax coloring must load from localhost.");
-    assert.equal((await fetch(base+"/animation-runner.js")).status,200,"Animation engine must load from localhost.");
-    assert.equal((await fetch(base+"/julia-loop.hlsl")).status,200,"Julia HLSL source must load from localhost.");
+    assert.equal(await fetchedStatus(fetch(base+"/browser-gpu.js")),200);
+    assert.equal(await fetchedStatus(fetch(base+"/gpu-visualizer.js")),200,"GPU renderer script must be served.");
+    assert.equal(await fetchedStatus(fetch(base+"/hlsl-highlight.js")),200,"HLSL syntax coloring must load from localhost.");
+    assert.equal(await fetchedStatus(fetch(base+"/animation-runner.js")),200,"Animation engine must load from localhost.");
+    assert.equal(await fetchedStatus(fetch(base+"/julia-loop.hlsl")),200,"Julia HLSL source must load from localhost.");
     const css=await fetch(base+"/workbench.css");
     assert.equal(css.status,200,"Workbench stylesheet must be served.");
     assert.match(css.headers.get("content-type")||"",/text\/css/);
-    assert.equal((await fetch(base+"/circle-mask.hlsl")).status,200,"Circle shader reference must be served.");
-    assert.equal((await fetch(base+"/unknown")).status,404);
+    await css.arrayBuffer();
+    assert.equal(await fetchedStatus(fetch(base+"/circle-mask.hlsl")),200,"Circle shader reference must be served.");
+    assert.equal(await fetchedStatus(fetch(base+"/unknown")),404);
     const cors=await post("/api/session/open",{}, "http://untrusted.example");
     assert.equal(cors.status,403,"Origin policy must reject foreign pages");
+    await cors.arrayBuffer();
     const one=await post("/api/session/open",{});
     const two=await post("/api/session/open",{});
     assert.equal(one.status,200);assert.equal(two.status,200);
@@ -74,12 +80,13 @@ try {
     assert.notEqual(a,b);
     let h=await(await fetch(base+"/api/health")).json();
     assert.equal(h.activeTabs,2);
-    assert.equal((await post("/api/session/close",{token:a})).status,200);
-    assert.equal((await post("/api/session/ping",{token:b})).status,200);
+    assert.equal(await fetchedStatus(post("/api/session/close",{token:a})),200);
+    assert.equal(await fetchedStatus(post("/api/session/ping",{token:b})),200);
     h=await(await fetch(base+"/api/health")).json();
     assert.equal(h.activeTabs,1);
     const invalid=await post("/api/compile",{source:'#include "/etc/passwd"',entry:"CSMain"});
     assert.equal(invalid.status,400);
+    await invalid.arrayBuffer();
     if(integration){
         for(const name of ["particle-step.hlsl","circle-mask.hlsl","julia-loop.hlsl"]){
             const shader=await readFile(join(folder,name),"utf8");
@@ -91,7 +98,7 @@ try {
             console.log("PASS real DXC + Naga conversion:",name);
         }
     }
-    assert.equal((await post("/api/session/close",{token:b})).status,200);
+    assert.equal(await fetchedStatus(post("/api/session/close",{token:b})),200);
     await exited();
     assert.equal(ps.exitCode,0,"Server crashed: "+stderr);
     console.log("PASS PowerShell bridge: routes, request guards, 2 tabs, clean exit"+(integration?", real DXC+Naga compile":""));
