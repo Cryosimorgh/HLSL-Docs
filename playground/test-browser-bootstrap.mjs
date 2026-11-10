@@ -166,6 +166,45 @@ try{
   assert.equal(foldAndHelp.separateExample,true);
   assert.equal(foldAndHelp.href,"hlsl-reference.html#float4");
 
+  const pinnedHelp=await evaluate(`(() => {
+    const cm=window.HLSLFoldDocs.editor;
+    let line=-1,col=-1;
+    for(let i=0;i<cm.lineCount();i++){
+      const n=cm.getLine(i).indexOf("float4");
+      if(n>=0){line=i;col=n+2;break;}
+    }
+    const coords=cm.charCoords({line,ch:col},"window");
+    const event=new MouseEvent("contextmenu",{
+      bubbles:true,cancelable:true,button:2,buttons:2,
+      clientX:coords.left,clientY:coords.top+3
+    });
+    cm.getWrapperElement().dispatchEvent(event);
+    const tooltip=document.getElementById("hlsl-help-tooltip");
+    const pinned=window.HLSLFoldDocs.helpPinned;
+    const suppressed=event.defaultPrevented;
+    const visible=!tooltip.hidden;
+    const selectable=getComputedStyle(tooltip).userSelect!=="none" &&
+      getComputedStyle(tooltip).pointerEvents!=="none";
+    const anchor=tooltip.querySelector("a");
+    const link=anchor?.getAttribute("href")||"";
+    tooltip.dispatchEvent(new MouseEvent("mouseenter"));
+    cm.getWrapperElement().dispatchEvent(new MouseEvent("mouseleave",{bubbles:false}));
+    const stillVisible=!tooltip.hidden;
+    tooltip.dispatchEvent(new MouseEvent("contextmenu",{cancelable:true}));
+    const stillPinned=window.HLSLFoldDocs.helpPinned;
+    window.HLSLFoldDocs.dismissHelp();
+    return {pinned,suppressed,visible,selectable,link,stillVisible,stillPinned,
+      dismissed:tooltip.hidden};
+  })()`);
+  assert.equal(pinnedHelp.pinned,true,"Right-click on HLSL token must pin documentation.");
+  assert.equal(pinnedHelp.suppressed,true,"Right-click should prevent the browser context menu.");
+  assert.equal(pinnedHelp.visible,true,"Right-click must show documentation.");
+  assert.equal(pinnedHelp.selectable,true,"Docs must allow text selection and clicks.");
+  assert.match(pinnedHelp.link,/hlsl-reference\.html#/,"Docs link should be navigable.");
+  assert.equal(pinnedHelp.stillVisible,true,"Moving from token to tooltip must not dismiss it.");
+  assert.equal(pinnedHelp.stillPinned,true,"Tooltip right-click should preserve pin.");
+  assert.equal(pinnedHelp.dismissed,true,"Pinned help must have an explicit dismiss action.");
+
   const editing=await evaluate(`(() => {
     const view=window.HLSLFoldDocs.editor;
     const before=view.getValue();
