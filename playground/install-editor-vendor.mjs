@@ -28,6 +28,8 @@ try {
     "addon/fold/foldcode.js":"foldcode.js",
     "addon/fold/foldgutter.js":"foldgutter.js",
     "addon/fold/foldgutter.css":"foldgutter.css",
+    "addon/hint/show-hint.js":"show-hint.js",
+    "addon/hint/show-hint.css":"show-hint.css",
     "LICENSE":"LICENSE"
   };
   for(const [from,to] of Object.entries(files)){
