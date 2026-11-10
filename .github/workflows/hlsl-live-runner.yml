@@ -10,6 +10,9 @@ on:
       - 'playground/live-runner.js'
       - 'playground/animation-runner.js'
       - 'playground/test-animation.mjs'
+      - 'playground/test-framebuffer.mjs'
+      - 'playground/julia-rgba.hlsl'
+      - 'playground/particles-rgba.hlsl'
       - 'playground/julia-loop.hlsl'
       - 'playground/gpu-visualizer.js'
       - 'playground/test-gpu-visualizer.mjs'
@@ -34,3 +37,4 @@ jobs:
           node playground/test-gpu-visualizer.mjs
           node playground/test-hlsl-highlight.mjs
           node playground/test-animation.mjs
+          node playground/test-framebuffer.mjs
