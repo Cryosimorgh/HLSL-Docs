@@ -6,6 +6,7 @@ import vm from "node:vm";
 const root=fileURLToPath(new URL(".",import.meta.url));
 const html=await readFile(root+"index.html","utf8");
 const runner=await readFile(root+"live-runner.js","utf8");
+const animation=await readFile(root+"animation-runner.js","utf8");
 const browserGpu=await readFile(root+"browser-gpu.js","utf8");
 const visualizer=await readFile(root+"gpu-visualizer.js","utf8");
 const hlslHighlight=await readFile(root+"hlsl-highlight.js","utf8");
@@ -18,6 +19,7 @@ const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
 assert.equal(scripts.length,2);
 new vm.Script(scripts[1][1]);
 new vm.Script(runner);
+new vm.Script(animation,{filename:"animation-runner.js"});
 for(const id of ["code","bindings","run-gpu","close-playground","compile-status","gpu-output"]) {
     assert.ok(html.includes('id="'+id+'"'),"Missing DOM element: "+id);
 }
@@ -32,6 +34,17 @@ for(const id of ["wgsl-code","wgsl-input","wgsl-output","wgsl-run","wgsl-reset"]
 assert.ok(html.includes('src="browser-gpu.js"'));
 assert.ok(html.includes('src="gpu-visualizer.js"'));
 assert.ok(html.includes('src="hlsl-highlight.js"'),"HLSL syntax mirror script missing");
+assert.ok(html.includes('src="animation-runner.js"'),"Continuous GPU scheduler script missing");
+assert.ok(html.indexOf('src="live-runner.js"')<html.indexOf('src="animation-runner.js"'),
+  "Base runner API must be initialized before continuous mode");
+for(const id of ["example-julia","animate-gpu","pause-gpu","step-gpu","reset-gpu",
+  "animation-fps","animation-frames","animation-time","viz-coverage-label"]){
+  assert.ok(html.includes('id="'+id+'"'),"Missing continuous GPU control: "+id);
+}
+assert.ok(runner.includes("window.HLSLRunnerAPI="),"Animation engine needs reusable HLSL compilation helpers.");
+assert.ok(animation.includes("requestAnimationFrame"),"Animation must schedule real frames.");
+assert.ok(animation.includes("queue.submit"),"Animation must submit GPU commands on repeated frames.");
+
 assert.ok(html.indexOf('src="hlsl-highlight.js"')<html.indexOf('src="live-runner.js"'),"Highlighter must load before preset initialization");
 assert.ok(html.includes('href="workbench.css"'),"Missing workbench styles.");
 assert.ok(html.indexOf('src="gpu-visualizer.js"')<html.indexOf('src="live-runner.js"'),
