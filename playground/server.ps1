@@ -182,7 +182,7 @@ function Compile-Hlsl {
   if($source -match '(?m)^\s*#\s*(include|include_next|import)\b') {
     throw 'Includes are disabled; paste dependencies into the editor'
   }
-  $hasher=[Security.Cryptography.SHA256]::Create()
+  $hasher=[System.Security.Cryptography.SHA256]::Create()
   try {
     $hash=[BitConverter]::ToString($hasher.ComputeHash(
       $utf8.GetBytes($entry+[char]0+$source))).Replace('-','')
