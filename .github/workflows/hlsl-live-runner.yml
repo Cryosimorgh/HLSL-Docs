@@ -8,6 +8,9 @@ on:
       - 'playground/hlsl-highlight.js'
       - 'playground/test-hlsl-highlight.mjs'
       - 'playground/live-runner.js'
+      - 'playground/animation-runner.js'
+      - 'playground/test-animation.mjs'
+      - 'playground/julia-loop.hlsl'
       - 'playground/gpu-visualizer.js'
       - 'playground/test-gpu-visualizer.mjs'
       - 'playground/circle-mask.hlsl'
@@ -30,3 +33,4 @@ jobs:
           node playground/test-frontend.mjs
           node playground/test-gpu-visualizer.mjs
           node playground/test-hlsl-highlight.mjs
+          node playground/test-animation.mjs
