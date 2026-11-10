@@ -80,7 +80,7 @@ jobs:
             Copy-Item -LiteralPath (Join-Path 'playground' $name) -Destination (Join-Path $app 'playground')
           }
           foreach ($editorAsset in @('codemirror.js','codemirror.css','foldcode.js','foldgutter.js','foldgutter.css','clike.js','LICENSE')) {
-            if (-not (Test-Path -LiteralPath (Join-Path $app 'playground\vendor\codemirror\'+$editorAsset))) {
+            if (-not (Test-Path -LiteralPath (Join-Path $app ('playground\vendor\codemirror\'+$editorAsset)))) {
               throw "Windows ZIP is missing editor dependency: $editorAsset"
             }
           }
