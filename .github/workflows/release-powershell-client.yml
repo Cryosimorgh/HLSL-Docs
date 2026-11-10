@@ -18,7 +18,7 @@ jobs:
       - name: Test editor and local HTTP API
         shell: pwsh
         run: |
-          # Ship offline HLSL help and validate its assets in the extracted portable client.
+          # Ship offline HLSL help, validate assets and exercise the local compiler bridge.
           node playground/test-frontend.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Frontend test failed' }
           node playground/test-gpu-visualizer.mjs
