@@ -60,13 +60,21 @@ jobs:
           } finally { $archive.Dispose() }
           & $naga --help | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'Naga binary did not run' }
-      - name: Test real HLSL compilation over the PowerShell HTTP API
+      - name: Smoke-test actual DXC to SPIR-V to Naga compilation
         shell: pwsh
         run: |
-          $env:HLSL_TEST_DXC=Join-Path $env:RUNNER_TEMP 'dxc\bin\x64\dxc.exe'
-          $env:HLSL_TEST_NAGA=Join-Path $env:RUNNER_TEMP 'naga.exe'
-          node playground/test-powershell.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Real compiler test failed' }
+          $ErrorActionPreference='Stop'
+          $dxc=Join-Path $env:RUNNER_TEMP 'dxc\bin\x64\dxc.exe'
+          $naga=Join-Path $env:RUNNER_TEMP 'naga.exe'
+          $spirv=Join-Path $env:RUNNER_TEMP 'smoke.spv'
+          $wgsl=Join-Path $env:RUNNER_TEMP 'smoke.wgsl'
+          & $dxc '-spirv' '-fspv-target-env=vulkan1.1' '-T' 'cs_6_0' '-E' 'CSMain' '-Fo' $spirv '-fvk-t-shift' '0' '0' '-fvk-u-shift' '16' '0' '-fvk-b-shift' '32' '0' '-fvk-s-shift' '48' '0' 'playground/julia-rgba.hlsl'
+          if($LASTEXITCODE -ne 0 -or -not (Test-Path $spirv)) { throw 'DXC smoke test failed' }
+          & $naga $spirv $wgsl
+          if($LASTEXITCODE -ne 0 -or -not (Test-Path $wgsl)) { throw 'Naga smoke test failed' }
+          if((Get-Content -LiteralPath $wgsl -Raw) -notmatch '@compute') {
+            throw 'Expected compute WGSL output'
+          }
       - name: Package portable client and compiler-only archive
         shell: pwsh
         run: |
