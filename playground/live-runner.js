@@ -90,7 +90,36 @@ function defaultManifest() {
   ]};
 }
 manifestArea.value=JSON.stringify(defaultManifest(),null,2);
+function inferFramebufferSpec(source) {
+  // Source-controlled, documented convention. No external animation manifest:
+  // - RWStructuredBuffer<float4> Framebuffer : register(u0)
+  // - cbuffer WorkbenchFrame : register(b7)
+  // - #define WORKBENCH_WIDTH / WORKBENCH_HEIGHT
+  if(!/\bRWStructuredBuffer\s*<\s*float4\s*>\s+Framebuffer\s*:\s*register\s*\(\s*u0\s*\)/i.test(source))
+    return null;
+  if(!/\bcbuffer\s+WorkbenchFrame\s*:\s*register\s*\(\s*b7\s*\)/i.test(source))
+    throw Error("Framebuffer mode requires cbuffer WorkbenchFrame : register(b7).");
+  const read=(key)=>{
+    const match=source.match(new RegExp("^\\s*#define\\s+"+key+"\\s+(\\d+)\\b","m"));
+    return match?Number(match[1]):NaN;
+  };
+  const width=read("WORKBENCH_WIDTH"),height=read("WORKBENCH_HEIGHT");
+  if(!Number.isInteger(width)||!Number.isInteger(height)||width<32||height<32||
+      width>512||height>512||width*height*16>4*1024*1024)
+    throw Error("Framebuffer HLSL needs #define WORKBENCH_WIDTH and HEIGHT (32..512, max 4 MiB).");
+  return {
+    entry:"CSMain",dispatch:"auto",autoFramebuffer:true,
+    animation:{binding:39,component:0,speed:1,fps:30},
+    resources:[
+      {binding:16,access:"read_write",byteLength:width*height*16,inspect:true,
+        display:"vec4",visualize:{mode:"grid-rgba",grid:{width,height,xMax:width,yMax:height},channel:2}},
+      {binding:39,access:"uniform",dataType:"f32",data:[0,0,width,height,0,0,0,0]}
+    ]
+  };
+}
 function parseManifest() {
+  const automatic=inferFramebufferSpec(editor.value);
+  if(automatic)return automatic;
   let p;
   try{p=JSON.parse(manifestArea.value)}catch(e){throw Error("Invalid bindings JSON: "+e.message)}
   if (!p || Array.isArray(p) || typeof p!=="object") throw Error("Expected a bindings JSON object.");
@@ -116,7 +145,7 @@ function parseManifest() {
     }
     if(r.visualize) {
       const v=r.visualize;
-      if(typeof v!=="object"||!["grid-mask","grid-fractal","scatter-mask","scatter"].includes(v.mode)||
+      if(typeof v!=="object"||!["grid-mask","grid-fractal","grid-rgba","scatter-mask","scatter"].includes(v.mode)||
          (v.channel!==undefined&&![0,1,2,3].includes(v.channel)))
         throw Error("Invalid visualization mode or channel.");
     }
@@ -224,7 +253,10 @@ async function run(){
   const autoCount=spec.resources.some(r=>r.preset==="grid")?
     gridConfig(spec).width*gridConfig(spec).height:window.HLSLPlayground.config().count;
   const dispatch=spec.dispatch==="auto"?
-    [Math.ceil(autoCount/size[0]),1,1]:spec.dispatch;
+    spec.autoFramebuffer?
+      [Math.ceil(spec.resources[0].visualize.grid.width/size[0]),
+       Math.ceil(spec.resources[0].visualize.grid.height/size[1]),1]:
+      [Math.ceil(autoCount/size[0]),1,1]:spec.dispatch;
   if(dispatch.some(x=>!Number.isInteger(x)||x<1||x>maxGroups))throw Error("Dispatch exceeds tutorial limits.");
   const adapter=await navigator.gpu.requestAdapter();
   if(!adapter)throw Error("No WebGPU adapter available.");
@@ -326,7 +358,7 @@ editor.addEventListener("keydown",e=>{
   }
 });
 function setActivePreset(which){
-  for(const id of ["example-circle","example-julia","example-scale","restore-example"])
+  for(const id of ["example-circle","example-julia","example-rgba-particles","example-scale","restore-example"])
     $(id).setAttribute("aria-pressed",String(id===which));
 }
 $("restore-example").addEventListener("click",()=>{
@@ -422,7 +454,7 @@ wgslDetails.addEventListener("toggle",()=>{
 window.HLSLRunnerAPI={
   editor,manifestArea,runButton,results,wgslArea,
   isBridgeOrigin,setStatus,setActivePreset,parseManifest,bytesFor,
-  gridConfig,compiledEntry,compiledSize,showBuffer
+  gridConfig,compiledEntry,compiledSize,showBuffer,inferFramebufferSpec
 };
 $("example-circle").click();
 if(!isBridgeOrigin)setStatus("Offline preview · launch Start-HLSL-Playground.cmd to run HLSL.");
