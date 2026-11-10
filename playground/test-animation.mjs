@@ -88,6 +88,7 @@ const win={
     editor:node("code"),manifestArea:node("bindings"),runButton:node("run-gpu"),
     results:node("gpu-output"),wgslArea:node("generated-wgsl"),
     isBridgeOrigin:true,
+    async compileForWebGPU(){compileCalls++;return{wgsl:"@compute @workgroup_size(64) fn CSMain() {}"}},
     setStatus:(...a)=>statuses.push(a),
     setActivePreset:id=>{node(id).pressed=true},
     parseManifest:()=>{
