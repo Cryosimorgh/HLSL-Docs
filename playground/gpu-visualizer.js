@@ -118,6 +118,47 @@ function drawGrid(ctx, v, count, opts,fractal=false){
   return {st:stats(values),kind:fractal?"fractal":"mask",
     description:gw+"×"+gh+" GPU readback samples; "+(fractal?"escape iterations":"mask")};
 }
+function drawRGBA(ctx,v,count,opts){
+  const g=opts.grid||{},w=g.width,h=g.height;
+  if(!Number.isInteger(w)||!Number.isInteger(h)||w*h!==count)
+    throw Error("HLSL Framebuffer dimensions do not match GPU output byte length.");
+  const m=setup(ctx,"HLSL RGBA framebuffer",w/h);
+  const bright=new Float32Array(count);
+  let pixels=null,bitmap=null,off=null;
+  if(typeof document.createElement==="function"&&typeof ctx.drawImage==="function"){
+    bitmap=document.createElement("canvas");bitmap.width=w;bitmap.height=h;
+    off=bitmap.getContext("2d");
+    if(off?.createImageData)pixels=off.createImageData(w,h);
+  }
+  for(let i=0;i<count;i++){
+    const j=i*4;
+    const r=clamp(finite(v[j])?v[j]:0,0,1);
+    const g0=clamp(finite(v[j+1])?v[j+1]:0,0,1);
+    const b=clamp(finite(v[j+2])?v[j+2]:0,0,1);
+    const a=clamp(finite(v[j+3])?v[j+3]:1,0,1);
+    bright[i]=0.2126*r+0.7152*g0+0.0722*b;
+    if(pixels){
+      pixels.data[j]=Math.round(r*255);
+      pixels.data[j+1]=Math.round(g0*255);
+      pixels.data[j+2]=Math.round(b*255);
+      pixels.data[j+3]=Math.round(a*255);
+    }else{
+      ctx.fillStyle="rgba("+Math.round(r*255)+","+Math.round(g0*255)+","+
+        Math.round(b*255)+","+a+")";
+      const x=m.left+(i%w)*m.width/w,y=m.top+Math.floor(i/w)*m.height/h;
+      ctx.fillRect(x,y,Math.ceil(m.width/w)+.1,Math.ceil(m.height/h)+.1);
+    }
+  }
+  if(pixels){
+    off.putImageData(pixels,0,0);
+    const smooth=ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(bitmap,m.left,m.top,m.width,m.height);
+    ctx.imageSmoothingEnabled=smooth;
+  }
+  return {st:stats(bright),kind:"rgba",
+    description:w+"×"+h+" full-color pixels from HLSL float4(r,g,b,a) WebGPU output"};
+}
 function drawScatter(ctx,v,count,opts,maskMode,defaultXMax){
   const channel=opts.channel??2;
   const maxX=finite(opts.xMax)&&opts.xMax>0?opts.xMax:defaultXMax,
@@ -173,10 +214,12 @@ function render({bytes,format,binding,visualize,source,worldWidth}) {
     if(bytes.byteLength%16)throw Error("float4 visualization requires 16-byte-aligned output.");
     const v=new Float32Array(bytes),count=v.length/4;
     mode=opts.mode||(hasMaskSource(source)?"scatter-mask":"scatter");
-    if(!["grid-mask","grid-fractal","scatter-mask","scatter"].includes(mode))throw Error("Unknown float4 visualization mode: "+mode);
-    result=mode==="grid-mask"||mode==="grid-fractal"
-      ?drawGrid(ctx,v,count,opts,mode==="grid-fractal")
-      :drawScatter(ctx,v,count,opts,mode==="scatter-mask",worldWidth||1);
+    if(!["grid-mask","grid-fractal","grid-rgba","scatter-mask","scatter"].includes(mode))throw Error("Unknown float4 visualization mode: "+mode);
+    result=mode==="grid-rgba"?
+      drawRGBA(ctx,v,count,opts):
+      (mode==="grid-mask"||mode==="grid-fractal")?
+        drawGrid(ctx,v,count,opts,mode==="grid-fractal"):
+        drawScatter(ctx,v,count,opts,mode==="scatter-mask",worldWidth||1);
   }else{
     const dv=new DataView(bytes),v=[];
     for(let i=0;i<bytes.byteLength;i+=4)
@@ -186,13 +229,16 @@ function render({bytes,format,binding,visualize,source,worldWidth}) {
   const {st,kind,description}=result;
   const set=(id,value)=>{const node=$(id);if(node)node.textContent=value;};
   set("viz-samples",st.n.toLocaleString("en-US"));
-  set("viz-coverage",(kind==="mask"||kind==="fractal")&&st.valid?(100*st.positive/st.valid).toFixed(1)+"%":"—");
+  set("viz-coverage",(kind==="mask"||kind==="fractal"||kind==="rgba")&&st.valid?(100*st.positive/st.valid).toFixed(1)+"%":"—");
   const coverageLabel=$("viz-coverage-label");
-  if(coverageLabel)coverageLabel.textContent=kind==="fractal"?"High iteration":"Coverage";
+  if(coverageLabel)coverageLabel.textContent=kind==="fractal"?"High iteration":kind==="rgba"?"Bright pixels":"Coverage";
   set("viz-range",fmt(st.min)+" – "+fmt(st.max));
   set("viz-mean",fmt(st.mean));
   summary.classList?.remove("warning");
-  if(kind==="fractal"){
+  if(kind==="rgba"){
+    title.textContent="HLSL framebuffer · binding "+binding;
+    summary.textContent=description;
+  }else if(kind==="fractal"){
     title.textContent="Julia fractal · binding "+binding;
     summary.textContent="Live GPU escape-time image · "+st.n+" samples";
   }else if(kind==="mask") {
@@ -209,7 +255,8 @@ function render({bytes,format,binding,visualize,source,worldWidth}) {
     summary.textContent+=" · "+(st.n-st.valid)+" non-finite values";
     summary.classList?.add("warning");
   }
-  legend.textContent=kind==="fractal"?"Deep blue → teal → amber = increasing escape iteration count":
+  legend.textContent=kind==="rgba"?"RGB and alpha are written in the HLSL shader. The browser only displays GPU readback pixels.":
+    kind==="fractal"?"Deep blue → teal → amber = increasing escape iteration count":
     kind==="mask"?
     "0 — outside · 1 — inside · Amber — positive mask":
     kind==="channel"?"XY position · color represents channel "+(opts.channel??2):
