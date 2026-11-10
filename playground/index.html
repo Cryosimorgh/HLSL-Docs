@@ -19,6 +19,7 @@
       </div>
     </div>
     <nav class="header-actions" aria-label="Workspace navigation">
+      <a href="hlsl-reference.html">HLSL reference</a>
       <a href="README.md">Documentation</a>
       <button class="quiet-button" id="close-playground" type="button" aria-label="End this playground session and stop the local compiler">End session</button>
     </nav>
@@ -57,6 +58,9 @@
           <div class="editor-tools">
             <button id="copy" type="button">Copy</button>
             <button id="download" type="button">Save .hlsl</button>
+            <button id="toggle-code-sections" class="editor-mode-button" type="button" aria-pressed="true">Full editor</button>
+            <button id="fold-all" class="editor-mode-button" type="button">Fold all</button>
+            <button id="unfold-all" class="editor-mode-button" type="button">Unfold all</button>
           </div>
         </div>
         <label class="sr-only" for="code">Editable HLSL compute shader source</label>
@@ -64,6 +68,7 @@
           <pre id="code-highlight" class="code-highlight" aria-hidden="true"><code id="code-highlight-content"></code></pre>
           <textarea id="code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable HLSL compute shader source"></textarea>
         </div>
+        <div id="code-sections" class="code-sections-view" aria-label="Foldable and editable HLSL code sections" hidden></div>
         <details class="bindings-panel">
           <summary>Resource bindings &amp; dispatch <span class="pane-hint">legacy shaders / advanced</span></summary>
           <p class="muted">Full-color Framebuffer HLSL shaders automatically use u0 and b7; no JSON animation manifest is needed. Older buffer-oriented examples still use this manual JSON panel.</p>
@@ -539,8 +544,19 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
     requestAnimationFrame(frame);
 })();
 </script>
+<aside id="hlsl-help-tooltip" class="hlsl-help-tooltip" role="tooltip" aria-label="HLSL code documentation" hidden>
+  <div class="doc-tooltip-head"><strong id="hlsl-help-title"></strong><span>HLSL reference</span></div>
+  <p><b>What</b> <span id="hlsl-help-what"></span></p>
+  <p><b>Does</b> <span id="hlsl-help-does"></span></p>
+  <p><b>Use</b> <span id="hlsl-help-use"></span></p>
+  <div class="doc-example-label">Code example</div>
+  <pre class="doc-example"><code id="hlsl-help-example"></code></pre>
+  <a id="hlsl-help-link" href="hlsl-reference.html" target="_blank" rel="noopener noreferrer">Open reference entry ↗</a>
+</aside>
 <script src="gpu-visualizer.js" defer></script>
 <script src="hlsl-highlight.js" defer></script>
+<script src="hlsl-docs-data.js" defer></script>
+<script src="hlsl-fold-docs.js" defer></script>
 <script src="live-runner.js" defer></script>
 <script src="animation-runner.js" defer></script>
 <script src="browser-gpu.js" defer></script>
