@@ -182,6 +182,20 @@ jobs:
             throw 'Process failed to stop after final tab'
           }
           Write-Host 'PASS packaged HLSL client, real compile API and cleanup'
+      - name: Upload complete Windows client as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HLSL-Playground-Windows-v1.9.0
+          path: ${{ runner.temp }}/hlsl-v1.5/HLSL-Playground-Windows-v1.9.0.zip
+          if-no-files-found: error
+          retention-days: 90
+      - name: Upload SHA256 checksums as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HLSL-Playground-v1.9.0-checksums
+          path: ${{ runner.temp }}/hlsl-v1.5/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 90
       - name: Publish downloadable Windows client
         shell: pwsh
         env:
