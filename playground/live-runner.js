@@ -332,6 +332,7 @@ $("restore-example").addEventListener("click",()=>{
   setActivePreset("restore-example");
   editor.dataset.dirty="";
   window.HLSLPlayground.restoreExample();
+  window.HLSLHighlight?.refresh();
   manifestArea.value=JSON.stringify(defaultManifest(),null,2);
   setStatus("Restored particle HLSL shader and bindings.");
 });
@@ -349,6 +350,7 @@ $("example-scale").addEventListener("click",()=>{
     "}"
   ].join("\n");
   editor.dataset.dirty="1";
+  window.HLSLHighlight?.refresh();
   manifestArea.value=JSON.stringify({
     entry:"CSMain",dispatch:[1,1,1],resources:[
       {binding:0,access:"read",dataType:"f32",data:[1,2,3,4,5,6,7,8]},
@@ -389,6 +391,7 @@ $("example-circle").addEventListener("click",()=>{
     "}"
   ].join("\n");
   editor.dataset.dirty="1";
+  window.HLSLHighlight?.refresh();
   manifestArea.value=JSON.stringify({
     entry:"CSMain",dispatch:"auto",resources:[
       {binding:0,access:"read",preset:"grid",grid},
