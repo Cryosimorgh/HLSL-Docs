@@ -23,6 +23,7 @@ const nodes={
   "gpu-preview-empty":{hidden:false},
   "viz-samples":{textContent:""},
   "viz-coverage":{textContent:""},
+  "viz-coverage-label":{textContent:""},
   "viz-range":{textContent:""},
   "viz-mean":{textContent:""}
 };
@@ -89,6 +90,21 @@ assert.equal(juliaResult.st.min,0);
 assert.equal(juliaResult.st.max,1);
 assert.match(nodes["gpu-visual-title"].textContent,/Julia fractal/);
 assert.equal(nodes["viz-coverage"].textContent,"50.0%");
+// No JavaScript palette for HLSL framebuffer: the three output channels are literal RGB.
+const rgba=new Float32Array([
+  1,0,0,1, 0,1,0,1,
+  0,0,1,1, 0.5,0.5,0.5,1
+]);
+const rgbaResult=viz.render({
+  bytes:rgba.buffer,format:"vec4",binding:16,
+  source:"RWStructuredBuffer<float4> Framebuffer : register(u0)",
+  visualize:{mode:"grid-rgba",grid:{width:2,height:2,xMax:2,yMax:2}}
+});
+assert.equal(rgbaResult.kind,"rgba");
+assert.equal(rgbaResult.st.valid,4);
+assert.match(nodes["gpu-visual-title"].textContent,/HLSL framebuffer/);
+assert.match(nodes["gpu-visual-legend"].textContent,/RGB and alpha/);
+assert.equal(nodes["viz-coverage-label"]?.textContent,"Bright pixels");
 viz.clear();
 assert.equal(nodes["gpu-visual-panel"].hidden,true);
 console.log("PASS: GPU-readback heatmap, zero-mask explanation, scatter, numeric bars and reset");
