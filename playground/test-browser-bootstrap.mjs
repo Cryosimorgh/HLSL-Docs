@@ -163,7 +163,7 @@ try{
     const section=document.querySelector(".code-section");
     section.querySelector(".section-edit-button").click();
     const editor=section.querySelector(".section-editor");
-    editor.value="// A REAL HLSL SECTION EDIT\n"+editor.value;
+    editor.value="// A REAL HLSL SECTION EDIT\\n"+editor.value;
     editor.dispatchEvent(new Event("input",{bubbles:true}));
     const after=document.getElementById("code").value;
     document.getElementById("toggle-code-sections").click();
