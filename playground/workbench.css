@@ -110,6 +110,15 @@ h1{font-size:clamp(27px,3.2vw,39px);line-height:1.16;letter-spacing:-.04em;font-
 }
 #run-gpu:hover,.buttons .primary:hover{background:#f5cb8c}
 .run-hint{color:var(--muted);font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+.animation-stats{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-top:11px;padding-top:10px;border-top:1px solid var(--border-soft);color:var(--muted);font:11px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+.animation-stats span{white-space:nowrap}
+.animation-stats strong{font-size:12px;font-weight:680;color:var(--ink);font-variant-numeric:tabular-nums}
+#animate-gpu{background:#30423b;color:#bedec5;border-color:#476957}
+#animate-gpu:hover:not(:disabled){background:#39544a}
+#pause-gpu:disabled,#step-gpu:disabled,#reset-gpu:disabled{opacity:.45;cursor:default}
+.run-controls{row-gap:9px}
+#animate-gpu,#pause-gpu,#step-gpu,#reset-gpu{padding:9px 12px;min-height:40px}
+
 #compile-status{margin:9px 0 0;font-size:12px;color:var(--muted);min-height:17px;overflow-wrap:anywhere}
 #compile-status.is-error{color:var(--danger)}
 .preview-surface{display:flex;flex-direction:column;background:#131920}
