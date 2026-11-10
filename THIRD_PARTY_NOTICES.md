@@ -7,9 +7,14 @@ The HLSL Handbook and PowerShell/.NET HTTP bridge source are distributed under t
 | Windows PowerShell/.NET host | Windows system installation | Windows PowerShell 5.1 | Microsoft Windows licensing; no binary is bundled or redistributed |
 | Microsoft DirectX Shader Compiler (DXC) | https://github.com/microsoft/DirectXShaderCompiler | v1.9.2609, Windows x64 | See upstream DXC license and redistribution terms |
 | Naga CLI | https://github.com/gfx-rs/wgpu/tree/trunk/naga-cli | Prebuilt naga-cli 30.0.1 from this project's prior compiler toolchain | MIT OR Apache-2.0; see upstream notices |
+| CodeMirror 5 (editor, folding gutter, C-like tokenization) | https://github.com/codemirror/codemirror5 | v5.65.21 | MIT; see `playground/vendor/codemirror/LICENSE` |
 
 The Naga executable is reused from the previously built Windows compiler-tool package; users do not need to install Rust or Cargo. The release package includes **only** DXC and Naga executables/DLLs under `tools/`; the previously flagged custom `hlsl-server.exe` is **not included or executed**.
 
 DXC converts HLSL to SPIR-V, Naga converts SPIR-V to WGSL, and the browser executes WGSL through WebGPU. This is not a native Direct3D 12 DXIL runtime.
 
 Always consult upstream licenses and redistributable notices for the compiler binaries. Distribution of the tools does not transfer ownership or change their licensing terms.
+
+## In-editor code folding
+
+The complete Windows v1.8.3 workbench includes CodeMirror 5.65.21 JavaScript, CSS and the folding addons for offline editing. These remain the work of Marijn Haverbeke and CodeMirror contributors, licensed under MIT. The exact MIT license text is included in `playground/vendor/codemirror/LICENSE`. No remote editor scripts are loaded at runtime, and no Node or npm installation is required for users of the full release ZIP.
