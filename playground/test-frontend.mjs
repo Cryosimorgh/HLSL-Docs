@@ -1,4 +1,4 @@
-// CI-only frontend syntax and DOM contract checks; shipped backend is Zig.
+// Frontend regression contracts; shipping backend is PowerShell/.NET.
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
@@ -48,7 +48,7 @@ for(const filename of ["hlsl-docs-data.js","hlsl-fold-docs.js"]){
 }
 assert.ok(html.indexOf('src="hlsl-docs-data.js"')<html.indexOf('src="hlsl-fold-docs.js"'),
   "HLSL help data must load before hover/fold logic.");
-for(const id of ["code-sections","toggle-code-sections","fold-all","unfold-all",
+for(const id of ["fold-all","unfold-all",
   "hlsl-help-tooltip","hlsl-help-title","hlsl-help-what","hlsl-help-does",
   "hlsl-help-use","hlsl-help-example","hlsl-help-link"]){
   assert.ok(html.includes('id="'+id+'"'),"Missing fold or hover control "+id);
@@ -57,8 +57,23 @@ assert.ok(docsPage.includes('src="hlsl-docs-data.js"'));
 assert.ok(docsPage.includes('id="reference-list"'));
 assert.ok(docsData.includes('"float4"')&&docsData.includes('"numthreads"')&&
   docsData.includes('"RWStructuredBuffer"'));
-assert.ok(folds.includes("source.dispatchEvent(new Event("),
-  "Chunk edits must update canonical source and notify the compile runner.");
+assert.ok(folds.includes('CM.fromTextArea(source')&&folds.includes('foldGutter:true'),
+  "Folding must happen inside the real code editor, not in separate cards.");
+assert.ok(folds.includes('source.dispatchEvent(new Event('),
+  "In-editor edits must update the canonical source consumed by DXC.");
+assert.ok(!html.includes('id="code-sections"')&&!html.includes('id="toggle-code-sections"'),
+  "Detached fold cards and the old mode switch must not reappear.");
+assert.ok(!css.includes('.code-section>summary'),"Old stacked code-card styling must be removed.");
+for(const file of ["codemirror.js","codemirror.css","foldcode.js","foldgutter.js",
+                   "foldgutter.css","clike.js"]){
+  assert.ok(html.includes('vendor/codemirror/'+file),"Offline editor asset missing in HTML: "+file);
+}
+assert.ok(html.indexOf('src="vendor/codemirror/codemirror.js"')<
+    html.indexOf('src="hlsl-fold-docs.js"'),
+    "CodeMirror core must load before the HLSL folding adapter.");
+assert.ok(css.includes('.CodeMirror-foldgutter')&&css.includes('.CodeMirror-linenumber'),
+  "Editor must show inline gutter arrows and line numbers.");
+
 
 assert.ok(html.includes('src="animation-runner.js"'),"Continuous GPU scheduler script missing");
 assert.ok(html.indexOf('src="live-runner.js"')<html.indexOf('src="animation-runner.js"'),
