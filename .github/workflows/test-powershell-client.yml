@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'playground/server.ps1'
+      - 'playground/animation-runner.js'
+      - 'playground/julia-loop.hlsl'
       - 'playground/circle-mask.hlsl'
       - 'playground/gpu-visualizer.js'
       - 'playground/test-powershell.mjs'
