@@ -18,7 +18,7 @@ jobs:
       - name: Test editor and local HTTP API
         shell: pwsh
         run: |
-          # The packaged release must include the source-tree fold/docs features.
+          # Include the full fold/docs frontend and validate the PowerShell server.
           node playground/test-frontend.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Frontend test failed' }
           node playground/test-gpu-visualizer.mjs
