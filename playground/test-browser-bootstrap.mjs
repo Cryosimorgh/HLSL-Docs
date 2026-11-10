@@ -109,8 +109,96 @@ try{
   const restored=await evaluate('(()=>{document.getElementById("example-julia").click();document.getElementById("gravity").value="2.3";document.getElementById("gravity").dispatchEvent(new Event("input"));return {src:document.getElementById("code").value,selected:document.getElementById("example-julia").getAttribute("aria-pressed")};})()');
   assert.match(restored.src,/FractalColor/,"Changing the separate sandbox must not overwrite the live HLSL shader.");
   assert.equal(restored.selected,"true");
+  const folded=await evaluate(`(() => {
+    const view=document.getElementById("code-sections");
+    const source=document.getElementById("code");
+    const chunks=[...view.querySelectorAll(".code-section")];
+    return {
+      enabled:!!window.HLSLFoldDocs,
+      visible:!view.hidden,
+      sourceHidden:document.querySelector(".editor-frame").hidden,
+      count:chunks.length,
+      roundtrip:window.HLSLFoldDocs.splitSource(source.value)
+        .map(x=>x.text).join("")===source.value,
+      docs:!!window.HLSLDocs?.get("float4")
+    };
+  })()`);
+  assert.equal(folded.enabled,true,"Foldable editor failed to initialize.");
+  assert.equal(folded.visible,true,"Code sections must be visible by default.");
+  assert.equal(folded.sourceHidden,true,"Hide duplicate textarea while using foldable sections.");
+  assert.ok(folded.count>=5,"Expected actual separate shader declarations and functions.");
+  assert.equal(folded.roundtrip,true,"Folding must not modify compiled HLSL bytes.");
+  assert.equal(folded.docs,true,"HLSL documentation must be loaded.");
+
+  const foldAndHelp=await evaluate(`(() => {
+    document.getElementById("fold-all").click();
+    const sections=[...document.querySelectorAll(".code-section")];
+    const allClosed=sections.every(section=>!section.open);
+    document.getElementById("unfold-all").click();
+    const allOpen=sections.every(section=>section.open);
+    const word=document.querySelector('[data-hlsl-doc="float4"]');
+    if(!word)throw Error("HLSL hover term not rendered in fold view");
+    word.dispatchEvent(new MouseEvent("mouseover",{bubbles:true,clientX:400,clientY:220}));
+    const tip=document.getElementById("hlsl-help-tooltip");
+    return {
+      allClosed,allOpen,tooltipVisible:!tip.hidden,
+      what:document.getElementById("hlsl-help-what").textContent,
+      use:document.getElementById("hlsl-help-use").textContent,
+      example:document.getElementById("hlsl-help-example").textContent,
+      separateExample:!!tip.querySelector("pre.doc-example > code"),
+      href:document.getElementById("hlsl-help-link").getAttribute("href")
+    };
+  })()`);
+  assert.equal(foldAndHelp.allClosed,true,"Fold all did not collapse the code chunks.");
+  assert.equal(foldAndHelp.allOpen,true,"Unfold all did not expand the code chunks.");
+  assert.equal(foldAndHelp.tooltipVisible,true,"Hover did not open local HLSL documentation.");
+  assert.ok(foldAndHelp.what&&foldAndHelp.use,"Hover needs brief what/does/use descriptions.");
+  assert.ok(foldAndHelp.example.includes("float4"),"Hover needs a standalone code example.");
+  assert.equal(foldAndHelp.separateExample,true,"Code example must be a separate code block.");
+  assert.equal(foldAndHelp.href,"hlsl-reference.html#float4",
+    "Hover help must link to the matching local docs anchor.");
+
+  const chunkEdit=await evaluate(`(() => {
+    const before=document.getElementById("code").value;
+    const section=document.querySelector(".code-section");
+    section.querySelector(".section-edit-button").click();
+    const editor=section.querySelector(".section-editor");
+    editor.value="// A REAL HLSL SECTION EDIT\n"+editor.value;
+    editor.dispatchEvent(new Event("input",{bubbles:true}));
+    const after=document.getElementById("code").value;
+    document.getElementById("toggle-code-sections").click();
+    return {
+      changed:after.startsWith("// A REAL HLSL SECTION EDIT"),
+      retained:after.includes("FractalColor"),
+      fullEditorVisible:!document.querySelector(".editor-frame").hidden,
+      compiledSourceHasEdit:window.HLSLRunnerAPI.editor.value===after,
+      fullSourceAfter:after
+    };
+  })()`);
+  assert.equal(chunkEdit.changed,true,"Section editor did not update canonical HLSL source.");
+  assert.equal(chunkEdit.retained,true,"Editing one chunk destroyed the remaining functions.");
+  assert.equal(chunkEdit.fullEditorVisible,true,"Full editor toggle did not restore textarea.");
+  assert.equal(chunkEdit.compiledSourceHasEdit,true,
+    "Compiler must receive edits made in folded HLSL sections.");
+
+  const reload=await evaluate(`(() => {
+    document.getElementById("example-julia").click();
+    document.getElementById("toggle-code-sections").click();
+    const source=document.getElementById("code").value;
+    return {
+      sourceRestored:!source.includes("A REAL HLSL SECTION EDIT"),
+      count:document.querySelectorAll(".code-section").length,
+      roundtrip:window.HLSLFoldDocs.splitSource(source).map(x=>x.text).join("")===source
+    };
+  })()`);
+  assert.equal(reload.sourceRestored,true,"Changing presets should rebuild code chunks.");
+  assert.ok(reload.count>=5);
+  assert.equal(reload.roundtrip,true);
+  const reference=await fetch(url+"hlsl-reference.html");
+  assert.equal(reference.status,200);
+  assert.match(await reference.text(),/HLSL quick reference/);
   assert.deepEqual(failures,[],"Uncaught browser exceptions during startup and preset switching.");
-  console.log("PASS Chromium: Julia source at startup, manifestless RGBA, GPU particles switch, no silent source overwrite.");
+  console.log("PASS Chromium: presets, fold/unfold, hover HLSL docs, separate examples, real chunk edits, full-source compilation and no uncaught exceptions.");
 }finally{
   try{socket?.close()}catch{}
   try{child.kill()}catch{}
