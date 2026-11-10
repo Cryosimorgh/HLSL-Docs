@@ -7,6 +7,8 @@ on:
       - 'playground/workbench.css'
       - 'playground/hlsl-highlight.js'
       - 'playground/test-hlsl-highlight.mjs'
+      - 'playground/hlsl-intellisense.js'
+      - 'playground/test-intellisense.mjs'
       - 'playground/live-runner.js'
       - 'playground/animation-runner.js'
       - 'playground/test-animation.mjs'
@@ -36,5 +38,6 @@ jobs:
           node playground/test-frontend.mjs
           node playground/test-gpu-visualizer.mjs
           node playground/test-hlsl-highlight.mjs
+          node playground/test-intellisense.mjs
           node playground/test-animation.mjs
           node playground/test-framebuffer.mjs
