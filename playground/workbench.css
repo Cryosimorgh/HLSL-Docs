@@ -248,42 +248,62 @@ h3{font-size:14px;font-weight:630;margin:14px 0 8px}
 }
 
 
-/* HLSL code structure: actual foldable source chunks, each independently editable. */
-.editor-tools{flex-wrap:wrap;justify-content:flex-end}
+/* Foldable source stays in ONE editor. No detached code cards. */
+.editor-tools{flex-wrap:wrap;justify-content:flex-end;gap:7px}
 .editor-tools .editor-mode-button{
-  color:var(--text);border:1px solid var(--border);border-radius:5px;
+  color:var(--text);border:1px solid var(--border);border-radius:4px;
   padding:5px 9px;font-size:11px
 }
-.editor-tools .editor-mode-button[aria-pressed="true"]{
-  background:#33302a;color:var(--accent);border-color:#8f784e
+.editor-tools .editor-mode-button:hover{background:#222d37;border-color:#667586}
+.editor-help-hint{color:var(--muted);font:11px/1.4 ui-monospace,Consolas,monospace;white-space:nowrap}
+.editor-frame.has-codemirror #code-highlight{display:none!important}
+.editor-frame.has-codemirror>.CodeMirror{
+  position:absolute;inset:0;width:100%;height:100%;
+  background:var(--editor);color:#d8e1e9;border:0;border-radius:0;
+  font:13px/1.7 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace;
+  font-variant-ligatures:none;letter-spacing:0
 }
-.code-sections-view{
-  display:block;height:clamp(430px,60vh,740px);min-height:260px;
-  overflow:auto;background:var(--editor);padding:8px 10px 18px;
-  scrollbar-color:#58616c transparent
+.editor-frame.has-codemirror .CodeMirror-scroll{min-height:0}
+.editor-frame.has-codemirror .CodeMirror-lines{padding:17px 0 26px}
+.editor-frame.has-codemirror .CodeMirror pre.CodeMirror-line,
+.editor-frame.has-codemirror .CodeMirror pre.CodeMirror-line-like{padding:0 14px 0 8px}
+.editor-frame.has-codemirror .CodeMirror-gutters{
+  background:#121923;border-right:1px solid #2b3541;color:#758393;
 }
-.code-section{border:1px solid #29313d;border-radius:6px;margin:8px 0;background:#131a23;overflow:hidden}
-.code-section>summary{display:flex;align-items:center;gap:9px;cursor:pointer;list-style:none;
-  padding:10px 12px;font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}
-.code-section>summary::-webkit-details-marker{display:none}
-.code-section>summary:before{
-  content:"▸";color:var(--muted);font-size:12px;width:13px;flex:none
+.editor-frame.has-codemirror .CodeMirror-linenumber{color:#6d7b89;padding:0 6px 0 3px}
+.editor-frame.has-codemirror .CodeMirror-foldgutter{width:19px}
+.editor-frame.has-codemirror .CodeMirror-foldgutter-open,
+.editor-frame.has-codemirror .CodeMirror-foldgutter-folded{
+  width:18px;color:#8594a5;text-align:center;font-size:11px;
+  padding:0;cursor:pointer;line-height:inherit
 }
-.code-section[open]>summary:before{content:"▾"}
-.code-section>summary:hover{background:#1b2530}
-.section-name{color:#d6e2ec;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.section-lines{margin-left:auto;flex:none;color:var(--muted);font-size:11px;white-space:nowrap}
-.section-body{border-top:1px solid var(--border-soft);position:relative}
-.section-body .section-edit-button{margin:8px 13px 1px;min-height:28px;padding:4px 9px;font-size:11px}
-.section-code{margin:0;border:0;max-height:none;overflow:auto;white-space:pre;
-  background:transparent;padding:10px 15px 15px;font:12.5px/1.75 ui-monospace,SFMono-Regular,Consolas,monospace;
-  color:#d8e1e9;tab-size:4}
-.section-editor{box-sizing:border-box;display:block;resize:vertical;width:calc(100% - 26px);min-height:110px;
-  margin:7px 13px 13px;padding:12px;background:#0d131b;color:#e3e8ed;
-  font:12.5px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;
-  border:1px solid #556579;border-radius:4px;white-space:pre;overflow:auto;tab-size:4}
-.doc-term{cursor:help;border-bottom:1px dotted transparent}
-.doc-term:hover,.doc-term:focus-visible{border-bottom-color:#ddb97c;outline:none;color:#f0d3a1}
+.editor-frame.has-codemirror .CodeMirror-foldgutter-open::after{content:"⌄"}
+.editor-frame.has-codemirror .CodeMirror-foldgutter-folded::after{content:"›"}
+.editor-frame.has-codemirror .CodeMirror-foldgutter-open:hover,
+.editor-frame.has-codemirror .CodeMirror-foldgutter-folded:hover{color:#e8bc75}
+.editor-frame.has-codemirror .CodeMirror-foldmarker{
+  color:#e8bc75;border:1px solid #505c6a;border-radius:3px;
+  background:#222e3a;padding:0 6px;cursor:pointer
+}
+.editor-frame.has-codemirror .CodeMirror-cursor{border-left:1px solid #f0d49d}
+.editor-frame.has-codemirror .CodeMirror-selected{background:#3b5068!important}
+.editor-frame.has-codemirror .CodeMirror-focused .CodeMirror-selected{background:#416283!important}
+.editor-frame.has-codemirror .CodeMirror-activeline-background{background:#1a2430}
+.editor-frame.has-codemirror .cm-comment{color:#8493a3}
+.editor-frame.has-codemirror .cm-keyword{color:#e8bc75}
+.editor-frame.has-codemirror .cm-type{color:#8cc6d7}
+.editor-frame.has-codemirror .cm-variable-2{color:#7dd2c7}
+.editor-frame.has-codemirror .cm-variable{color:#dce5ed}
+.editor-frame.has-codemirror .cm-def{color:#b1cbef}
+.editor-frame.has-codemirror .cm-number{color:#e8b57d}
+.editor-frame.has-codemirror .cm-atom{color:#c1afdf}
+.editor-frame.has-codemirror .cm-builtin{color:#a8bdf0}
+.editor-frame.has-codemirror .cm-meta{color:#d1a5c5}
+.editor-frame.has-codemirror .cm-string{color:#a6ceaa}
+.editor-frame.has-codemirror .cm-operator{color:#b2bcc8}
+.editor-frame.has-codemirror .CodeMirror-matchingbracket{
+  color:#eac78d!important;outline:1px solid #63788f
+}
 .hlsl-help-tooltip{
   position:fixed;z-index:100;box-sizing:border-box;width:min(375px,calc(100vw - 18px));
   max-height:min(560px,85vh);overflow:auto;padding:15px 16px 13px;
@@ -304,11 +324,8 @@ h3{font-size:14px;font-weight:630;margin:14px 0 8px}
 }
 .hlsl-help-tooltip .doc-example code{font:11.5px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
 .hlsl-help-tooltip a{font-size:12px;display:inline-block;margin-top:3px}
-@media(max-width:850px){.code-sections-view{height:460px}}
 @media(max-width:600px){
-  .code-sections-view{height:400px;padding:6px}
-  .section-lines{display:none}
-  .section-code{font-size:11.5px;padding:9px}
   .editor-tools{gap:4px}
   .editor-tools .editor-mode-button{padding:4px 6px}
+  .editor-help-hint{display:none}
 }
