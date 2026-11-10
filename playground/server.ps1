@@ -31,6 +31,8 @@ $static = @{
   '/' = @('index.html', 'text/html; charset=utf-8')
   '/index.html' = @('index.html', 'text/html; charset=utf-8')
   '/live-runner.js' = @('live-runner.js', 'application/javascript; charset=utf-8')
+  '/animation-runner.js' = @('animation-runner.js', 'application/javascript; charset=utf-8')
+  '/julia-loop.hlsl' = @('julia-loop.hlsl', 'text/plain; charset=utf-8')
   '/browser-gpu.js' = @('browser-gpu.js', 'application/javascript; charset=utf-8')
   '/gpu-visualizer.js' = @('gpu-visualizer.js', 'application/javascript; charset=utf-8')
   '/hlsl-highlight.js' = @('hlsl-highlight.js', 'application/javascript; charset=utf-8')
