@@ -9,7 +9,10 @@
   const startButton=$("animate-gpu"),pauseButton=$("pause-gpu"),
         stepButton=$("step-gpu"),resetButton=$("reset-gpu");
   const fpsLabel=$("animation-fps"),frameLabel=$("animation-frames"),
-        timeLabel=$("animation-time");
+        timeLabel=$("animation-time"),
+        compileLabel=$("animation-compile-ms"),
+        readbackLabel=$("animation-readback-ms"),
+        drawLabel=$("animation-draw-ms");
   if(!api||!startButton) return;
   const maxBytes=4*1024*1024,maxTotal=8*1024*1024;
   let current=null,starting=false,serial=0;
@@ -28,6 +31,9 @@
     fpsLabel.textContent="—";
     frameLabel.textContent="0";
     timeLabel.textContent="0.0 s";
+    compileLabel.textContent="—";
+    readbackLabel.textContent="—";
+    drawLabel.textContent="—";
   };
   const updateMetrics=(s,frameMs)=>{
     frameLabel.textContent=s.frameCount.toLocaleString();
@@ -95,6 +101,7 @@
     if(!api.isBridgeOrigin)throw Error("Launch the Windows client and use its localhost tab to animate HLSL.");
     if(!navigator.gpu)throw Error("WebGPU is not available in this browser.");
     const spec=api.parseManifest(),source=api.editor.value,manifestText=api.manifestArea.value;
+    const compileStart=now();
     const animation=validateAnimation(spec);
     if(!source||source.length>65536)throw Error("Invalid HLSL source length.");
     const response=await fetch("/api/compile",{
@@ -104,7 +111,10 @@
     });
     const compiled=await response.json();
     if(!response.ok)throw Error(compiled.error||"HLSL compilation failed.");
+    const compileWallMs=now()-compileStart;
     const wgsl=compiled.wgsl;
+    setStatus("DXC/Naga "+(compiled.cacheHit?"cache hit":"compiled")+
+      " in "+compileWallMs.toFixed(0)+" ms. Creating GPU pipeline…");
     api.wgslArea.textContent=wgsl;
     const entry=api.compiledEntry(wgsl),size=api.compiledSize(wgsl);
     const g=api.gridConfig(spec);
@@ -123,6 +133,7 @@
     if(dispatch.some(n=>n>adapter.limits.maxComputeWorkgroupsPerDimension))
       throw Error("Workgroup dispatch exceeds GPU device limits.");
     const device=await adapter.requestDevice();
+    const pipelineStart=now();
     const allocations=[];
     let readback=null;
     try {
@@ -167,6 +178,8 @@
         device,pipeline,bindGroup,dispatch,allocations,readback,inspect,
         uniform:a,config:animation,initialPhase,phase:initialPhase,
         source,manifestText,autoFramebuffer:!!spec.autoFramebuffer,frameCount:0,elapsed:0,raf:0,lastTs:0,
+        compileMs:compileWallMs,pipelineMs:now()-pipelineStart,
+        readbackMs:0,drawMs:0,cacheHit:!!compiled.cacheHit,
         running:false,inFlight:false,stopping:false,disposed:false,
         lastMeasured:0,countSinceMeasured:0
       };
@@ -210,18 +223,26 @@
       pass.dispatchWorkgroups(...s.dispatch);
       pass.end();
       encoder.copyBufferToBuffer(s.inspect.buffer,0,s.readback,0,s.inspect.length);
+      const readbackStart=now();
       s.device.queue.submit([encoder.finish()]);
       await s.readback.mapAsync(GPUMapMode.READ);
       const data=s.readback.getMappedRange().slice(0);
       s.readback.unmap();
       if(s.stopping||current!==s)return;
+      s.readbackMs=now()-readbackStart;
+      const drawStart=now();
       window.HLSLGPUVisualize.render({
         bytes:data,format:s.inspect.r.display||"f32",
         binding:s.inspect.r.binding,visualize:s.inspect.r.visualize,
         source:s.source,worldWidth:api.gridConfig({resources:[]}).xMax
       });
+      s.drawMs=now()-drawStart;
       s.frameCount++;
       s.countSinceMeasured++;
+      if(s.frameCount===1||s.frameCount%15===0){
+        readbackLabel.textContent=s.readbackMs.toFixed(1)+" ms";
+        drawLabel.textContent=s.drawMs.toFixed(1)+" ms";
+      }
       updateMetrics(s,now()-start);
       // Avoid rebuilding a long textual dump on every animation frame.
       if(s.frameCount===1||s.frameCount%30===0){
@@ -248,7 +269,8 @@
       if(s.lastTs && timestamp-s.lastTs<interval-1){
         schedule(s);return;
       }
-      const dt=s.lastTs?Math.min(Math.max((timestamp-s.lastTs)/1000,0),0.15):1/s.config.fps;
+      // Preserve real elapsed time if GPU readback is slower than target FPS.
+      const dt=s.lastTs?Math.min(Math.max((timestamp-s.lastTs)/1000,0),1):1/s.config.fps;
       s.lastTs=timestamp;
       try{await frame(s,dt)}
       catch(e){
@@ -277,6 +299,10 @@
       if(ticket!==serial){session.stopping=true;dispose(session);return;}
       current=session;
       resetMetrics();
+      compileLabel.textContent=session.compileMs.toFixed(0)+" ms"+(session.cacheHit?" (cached)":"");
+      setStatus("HLSL "+(session.cacheHit?"reused":"compiled")+" in "+
+        session.compileMs.toFixed(0)+" ms; GPU pipeline "+
+        session.pipelineMs.toFixed(0)+" ms. Dispatching…");
       current.running=true;
       schedule(current);
       setStatus("Running · shader compiled once; time uniform updates every GPU frame.");
