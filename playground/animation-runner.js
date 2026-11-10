@@ -88,7 +88,7 @@
   async function prepare(){
     if(!api.isBridgeOrigin)throw Error("Launch the Windows client and use its localhost tab to animate HLSL.");
     if(!navigator.gpu)throw Error("WebGPU is not available in this browser.");
-    const spec=api.parseManifest(),source=api.editor.value;
+    const spec=api.parseManifest(),source=api.editor.value,manifestText=api.manifestArea.value;
     const animation=validateAnimation(spec);
     if(!source||source.length>65536)throw Error("Invalid HLSL source length.");
     const response=await fetch("/api/compile",{
@@ -155,7 +155,7 @@
       const s={
         device,pipeline,bindGroup,dispatch,allocations,readback,inspect,
         uniform:a,config:animation,initialPhase,phase:initialPhase,
-        source,frameCount:0,elapsed:0,raf:0,lastTs:0,
+        source,manifestText,frameCount:0,elapsed:0,raf:0,lastTs:0,
         running:false,inFlight:false,stopping:false,disposed:false,
         lastMeasured:0,countSinceMeasured:0
       };
@@ -245,6 +245,9 @@
   }
   async function start(){
     if(starting)return;
+    if(current&&(current.source!==api.editor.value||current.manifestText!==api.manifestArea.value)){
+      stop(); // Rebuild when user changes shader or resource configuration.
+    }
     if(current){
       if(!current.running){current.running=true;current.lastTs=0;schedule(current);updateUI();setStatus("Resumed continuous GPU animation.");}
       return;
@@ -268,6 +271,7 @@
   }
   async function step(){
     if(starting)return;
+    if(current&&(current.source!==api.editor.value||current.manifestText!==api.manifestArea.value))stop();
     if(!current){
       await start();
       if(!current)return;
