@@ -1,4 +1,4 @@
-name: Release PowerShell HLSL client v1.9.0
+name: Release PowerShell HLSL client v1.9.1
 on:
   push:
     branches: [main]
@@ -72,7 +72,7 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $out=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5'
-          $app=Join-Path $out 'HLSL-Playground-Windows-v1.9.0'
+          $app=Join-Path $out 'HLSL-Playground-Windows-v1.9.1'
           $toolOnly=Join-Path $out 'compiler-only'
           foreach ($dir in @($app,(Join-Path $app 'playground'),(Join-Path $app 'tools\dxc'),(Join-Path $app 'tools\naga'),(Join-Path $toolOnly 'tools\dxc'),(Join-Path $toolOnly 'tools\naga'))) {
             New-Item -ItemType Directory -Path $dir -Force | Out-Null
@@ -94,7 +94,7 @@ jobs:
               throw "Full Windows ZIP is missing required animation asset: $asset"
             }
           }
-          foreach ($name in @('Start-HLSL-Playground.cmd','Start-HLSL-Playground.ps1','README-WINDOWS.txt','README.md','HLSL-Handbook.md','RELEASE_NOTES_v1.9.0.md','LICENSE','THIRD_PARTY_NOTICES.md')) {
+          foreach ($name in @('Start-HLSL-Playground.cmd','Start-HLSL-Playground.ps1','README-WINDOWS.txt','README.md','HLSL-Handbook.md','RELEASE_NOTES_v1.9.1.md','LICENSE','THIRD_PARTY_NOTICES.md')) {
             Copy-Item -LiteralPath $name -Destination $app
           }
           Copy-Item -LiteralPath 'docs' -Destination $app -Recurse
@@ -110,8 +110,8 @@ jobs:
           Copy-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'naga.exe') -Destination (Join-Path $toolOnly 'tools\naga\naga.exe')
           $actual=@(Get-ChildItem -LiteralPath $app -Recurse -File -Filter '*.exe' | Select-Object -ExpandProperty Name)
           if(@($actual | Where-Object { $_ -notin @('dxc.exe','naga.exe') }).Count -ne 0) { throw 'Unexpected executable! Custom server not allowed' }
-          $appZip=Join-Path $out 'HLSL-Playground-Windows-v1.9.0.zip'
-          $toolsZip=Join-Path $out 'HLSL-CompilerTools-v1.9.0.zip'
+          $appZip=Join-Path $out 'HLSL-Playground-Windows-v1.9.1.zip'
+          $toolsZip=Join-Path $out 'HLSL-CompilerTools-v1.9.1.zip'
           Compress-Archive -LiteralPath $app -DestinationPath $appZip -CompressionLevel Optimal
           Compress-Archive -LiteralPath (Join-Path $toolOnly 'tools') -DestinationPath $toolsZip -CompressionLevel Optimal
           @($appZip,$toolsZip) | ForEach-Object {
@@ -121,7 +121,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          $app=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5\HLSL-Playground-Windows-v1.9.0'
+          $app=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5\HLSL-Playground-Windows-v1.9.1'
           & (Join-Path $app 'Start-HLSL-Playground.ps1') -NoBrowser
           $ready=Get-ChildItem -LiteralPath $env:TEMP -Directory -Filter 'hlsl-playground-run-*' |
             Sort-Object LastWriteTime -Descending |
@@ -145,7 +145,12 @@ jobs:
             if($doc.StatusCode -ne 200) { throw "Packaged documentation asset unavailable: $asset" }
           }
           $page=Invoke-WebRequest -Uri "$($info.url)/" -UseBasicParsing
-          if($page.Content -notmatch 'vendor/codemirror/codemirror.js' -or
+          if($page.Content -notmatch 'id="animation-compile-ms"' -or
+             $page.Content -notmatch 'id="animation-readback-ms"' -or
+             $page.Content -notmatch 'id="animation-draw-ms"' -or
+             $page.Content -notmatch 'class="editor-shortcuts"' -or
+             $page.Content -notmatch 'id="hlsl-help-close"' -or
+             $page.Content -notmatch 'vendor/codemirror/codemirror.js' -or
              $page.Content -notmatch 'vendor/codemirror/show-hint.js' -or
              $page.Content -notmatch 'id="trigger-completion"' -or
              $page.Content -notmatch 'id="hlsl-signature-help"' -or
@@ -185,25 +190,26 @@ jobs:
       - name: Upload complete Windows client as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HLSL-Playground-Windows-v1.9.0
-          path: ${{ runner.temp }}/hlsl-v1.5/HLSL-Playground-Windows-v1.9.0.zip
+          name: HLSL-Playground-Windows-v1.9.1
+          path: ${{ runner.temp }}/hlsl-v1.5/HLSL-Playground-Windows-v1.9.1.zip
           if-no-files-found: error
           retention-days: 90
       - name: Upload SHA256 checksums as workflow artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HLSL-Playground-v1.9.0-checksums
+          name: HLSL-Playground-v1.9.1-checksums
           path: ${{ runner.temp }}/hlsl-v1.5/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 90
       - name: Publish downloadable Windows client
+        continue-on-error: true # Actions artifacts remain downloadable if Releases API is denied.
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference='Stop'
-          gh release view v1.9.0 *> $null
-          if($LASTEXITCODE -eq 0) { throw 'v1.9.0 already exists' }
+          gh release view v1.9.1 *> $null
+          if($LASTEXITCODE -eq 0) { throw 'v1.9.1 already exists' }
           $out=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5'
-          gh release create v1.9.0 (Join-Path $out 'HLSL-Playground-Windows-v1.9.0.zip') (Join-Path $out 'HLSL-CompilerTools-v1.9.0.zip') (Join-Path $out 'SHA256SUMS.txt') --target $env:GITHUB_SHA --title 'HLSL Workbench v1.9.0 — Offline HLSL Code Completion and Signature Help' --notes-file RELEASE_NOTES_v1.9.0.md
+          gh release create v1.9.1 (Join-Path $out 'HLSL-Playground-Windows-v1.9.1.zip') (Join-Path $out 'HLSL-CompilerTools-v1.9.1.zip') (Join-Path $out 'SHA256SUMS.txt') --target $env:GITHUB_SHA --title 'HLSL Workbench v1.9.1 — Faster HLSL Runs and Interactive IntelliSense Help' --notes-file RELEASE_NOTES_v1.9.1.md
           if($LASTEXITCODE -ne 0) { throw 'Release publish failed' }
