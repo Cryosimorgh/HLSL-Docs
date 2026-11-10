@@ -8,19 +8,19 @@ Learn **how the HLSL language and GPU pipeline fit together**, with diagrams, an
 
 > Independent learning resource; **not official Microsoft documentation**. Focus: modern Direct3D 12 + DXC + SM6.x. Differences for D3D11/FXC and newer hardware features are explicitly marked. Last reviewed: **9 November 2026**.
 
-## Run the HLSL compute client on Windows (v1.5.0)
+## HLSL Workbench for Windows (v1.8.0)
 
-**[Download the Windows HLSL client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.7.0.zip)** · [Release notes, checksum and compiler tools](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.7.0)
+**[Download the complete Windows HLSL Workbench v1.8.0 ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.8.0/HLSL-Playground-Windows-v1.8.0.zip)** · [Release notes and checksums](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.8.0)
 
-Extract the ZIP, double-click **Start-HLSL-Playground.cmd**, and use the new localhost browser tab. **For a visible shader result**, the **Julia animation** preset is ready on launch. Click **Animate** for real continuous GPU dispatch; click **Compile & Run HLSL** (or Ctrl+Enter) for single-step inspection. The actual GPU readback is shown alongside the editor with compact statistics; expand the raw-buffer or WGSL inspectors only when needed. The editor now has lightweight HLSL syntax coloring, a larger preview, and clear disclosure chevrons. The live animation updates a time uniform every frame, reuses a compiled GPU pipeline and shows frame/FPS counters. Click **Array example**, edit the HLSL code, then **Compile & Run HLSL**. The resulting buffer values are shown underneath. No Node, Zig or Rust installation is required.
+Extract the ZIP in a clean folder and double-click **Start-HLSL-Playground.cmd**. No Rust, Zig or Node installation is required. The localhost PowerShell/.NET host uses included Microsoft DXC and prebuilt Naga to compile compatible HLSL to WebGPU WGSL.
 
-The client uses Windows PowerShell/.NET as an auditable **localhost compiler host**, Microsoft DXC to compile HLSL to SPIR-V, prebuilt Naga to generate WGSL, and browser WebGPU to execute compatible compute shaders. The local host stops after the final tab disconnects.
+**Animate real HLSL pixels:** the default **Julia animation** preset and the **GPU particles** preset write actual per-pixel `float4(r,g,b,a)` values in HLSL. Click **Animate** for continuous WebGPU dispatch or **Compile & Run HLSL** for a single frame. The preview reads back and displays the GPU's RGB values directly; it does **not** assign colors from a JavaScript visualization palette. The GPU particles example uses procedural bouncing trajectories, not a colliding-particle physics solver.
 
-A source checkout also works: its updated launcher downloads only the compiler tools from the versioned GitHub release, validates their SHA-256, and caches them privately. It never launches the older Zig `hlsl-server.exe`.
+In this self-contained framebuffer mode, no `animation` JSON manifest is needed: the workbench infers resolution and bindings from the HLSL `#define WORKBENCH_WIDTH/HEIGHT`, `RWStructuredBuffer<float4> Framebuffer : register(u0)` and `cbuffer WorkbenchFrame : register(b7)`. The host supplies frame time and repeatedly dispatches the compiled compute shader. HLSL itself does not control the browser's event loop. The older manual buffer-manifest examples remain available.
 
-**Compatibility boundaries:** This is a supported buffer-oriented **compute-shader** host, not a universal HLSL/Direct3D execution environment. WebGPU support depends on the browser and GPU. The old Zig binary was quarantined and crashed on one Windows machine; this release removes that custom executable rather than requiring antivirus exclusions.
+See [the full HLSL framebuffer and animation guide](playground/README.md) for the contract, color output, time uniforms and limits. Browser WebGPU support is required. The old custom Zig `hlsl-server.exe` is not included or executed; no antivirus bypass is needed.
 
-For a **completely browser-only tutorial** without a local host, use the independent [editable WGSL WebGPU exercise](playground/index.html) or [browser-only v1.4.0 ZIP](https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.4.0). This runs WGSL, not HLSL.
+A source checkout can also launch the client using the same CMD file. When it lacks DXC/Naga, it downloads a checksum-pinned **compiler-only** archive from an earlier release; it never launches a custom Zig server executable.
 
 ## Learn interactively and use the Agent Skill
 
