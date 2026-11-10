@@ -19,7 +19,12 @@ const nodes={
   "gpu-visual":{width:800,height:400,getContext:()=>ctx},
   "gpu-visual-summary":{textContent:""},
   "gpu-visual-title":{textContent:""},
-  "gpu-visual-legend":{textContent:""}
+  "gpu-visual-legend":{textContent:""},
+  "gpu-preview-empty":{hidden:false},
+  "viz-samples":{textContent:""},
+  "viz-coverage":{textContent:""},
+  "viz-range":{textContent:""},
+  "viz-mean":{textContent:""}
 };
 const window={};
 vm.runInNewContext(source,{window,document:{getElementById:id=>nodes[id]},console});
@@ -46,6 +51,13 @@ assert.equal(rendered.st.mean,0.5);
 assert.match(nodes["gpu-visual-summary"].textContent,/8\/16 samples have mask/);
 assert.equal(nodes["gpu-visual-panel"].hidden,false);
 assert.ok(commands.filter(c=>c[0]==="fillRect").length>=18);
+const gridRect=commands.filter(c=>c[0]==="fillRect")[1];
+assert.ok(Math.abs(gridRect[3]-gridRect[4])<0.01,
+  "A unit-square circle mask must have equal pixel dimensions, not an ellipse.");
+assert.equal(nodes["gpu-preview-empty"].hidden,true,"Successful GPU output must replace empty state.");
+assert.equal(nodes["viz-samples"].textContent,"16");
+assert.equal(nodes["viz-coverage"].textContent,"50.0%");
+
 
 // Zero-mask output must give a visible diagnostic, not an apparently blank panel.
 output.forEach((_,i)=>{if(i%4===2)output[i]=0;});
@@ -54,7 +66,7 @@ rendered=viz.render({
   source:"float mask = smoothstep(a,b,d);",worldWidth:4
 });
 assert.equal(rendered.st.positive,0);
-assert.match(nodes["gpu-visual-summary"].textContent,/ALL MASKS ZERO/);
+assert.match(nodes["gpu-visual-summary"].textContent,/all masks zero/i);
 
 // Ordinary numeric output displays a bar chart and correct min/max.
 rendered=viz.render({
