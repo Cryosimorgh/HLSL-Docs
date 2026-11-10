@@ -235,6 +235,38 @@ function compiledSize(wgsl) {
   if(!m)throw Error("Cannot determine compiled @workgroup_size.");
   return [Number(m[1]),Number(m[2]||1),Number(m[3]||1)];
 }
+// A compiler response may be truncated by the localhost PowerShell socket.
+// Retry a failed transfer (not a DXC/Naga diagnostic); the backend caches
+// successful unchanged shaders, so retry normally skips both compiler tools.
+async function compileForWebGPU(source,entry){
+  let lastError;
+  for(let attempt=0;attempt<3;attempt++){
+    try{
+      const response=await fetch("/api/compile",{
+        method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({source,entry}),signal:AbortSignal.timeout(35000)
+      });
+      const result=await response.json();
+      if(!response.ok){
+        const diagnostic=new Error(result.error||"Compilation failed.");
+        diagnostic.compilerDiagnostic=true;
+        throw diagnostic;
+      }
+      if(typeof result.wgsl!=="string"||!result.wgsl.includes("@compute"))
+        throw Error("Compiler returned incomplete WGSL");
+      return result;
+    }catch(error){
+      if(error.compilerDiagnostic||error.name==="AbortError"||
+         error.name==="TimeoutError")throw error;
+      lastError=error;
+      if(attempt===2)break;
+      setStatus("Compiler response was interrupted; retrying ("+(attempt+1)+"/2)…");
+      await new Promise(resolve=>setTimeout(resolve,150*(attempt+1)));
+    }
+  }
+  throw Error("Unable to receive compiler output after retries: "+
+    (lastError?.message||String(lastError)));
+}
 async function run(){
   if(!isBridgeOrigin)throw Error("This tab is offline. Run Start-HLSL-Playground.cmd from the new Windows portable package or an updated checkout and use the new localhost tab.");
   if(!navigator.gpu)throw Error("No WebGPU support. Use a compatible Chromium/Edge browser and GPU.");
@@ -243,10 +275,7 @@ async function run(){
   setStatus("Compiling · DXC → Naga → WebGPU…");
   results.textContent="";wgslArea.textContent="";
   window.HLSLGPUVisualize.clear();
-  const response=await fetch("/api/compile",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({source,entry:spec.entry}),signal:AbortSignal.timeout(35000)});
-  const result=await response.json();
-  if(!response.ok)throw Error(result.error||"Compilation failed.");
+  const result=await compileForWebGPU(source,spec.entry);
   const wgsl=result.wgsl;
   wgslArea.textContent=wgsl;
   const entry=compiledEntry(wgsl),size=compiledSize(wgsl);
@@ -455,7 +484,7 @@ wgslDetails.addEventListener("toggle",()=>{
 window.HLSLRunnerAPI={
   editor,manifestArea,runButton,results,wgslArea,
   isBridgeOrigin,setStatus,setActivePreset,parseManifest,bytesFor,
-  gridConfig,compiledEntry,compiledSize,showBuffer,inferFramebufferSpec
+  gridConfig,compiledEntry,compiledSize,showBuffer,inferFramebufferSpec,compileForWebGPU
 };
 // Do not install a legacy shader during startup. animation-runner.js owns
 // the initial source selection and the matching manifestless framebuffer mode.
