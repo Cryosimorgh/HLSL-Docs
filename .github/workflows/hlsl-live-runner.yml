@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - 'playground/index.html'
+      - 'playground/workbench.css'
       - 'playground/live-runner.js'
       - 'playground/gpu-visualizer.js'
       - 'playground/test-gpu-visualizer.mjs'
