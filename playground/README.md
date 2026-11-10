@@ -1,19 +1,59 @@
-# Interactive HLSL Compute Playground
+# HLSL Workbench — GPU Compute and Continuous Animation
 
-**[Download the Windows v1.7.0 client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.7.0.zip)** · [Handbook](../README.md) · [Compute shader source](particle-step.hlsl)
+**[Download complete Windows Workbench v1.8.0](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.8.0/HLSL-Playground-Windows-v1.8.0.zip)** · [Release notes](../RELEASE_NOTES_v1.8.0.md) · [HLSL Handbook](../HLSL-Handbook.md)
 
-## Run real HLSL on Windows
+## Run the Windows client
 
-1. Extract the **entire** Windows v1.7.0 ZIP into a new folder.
-2. Double-click **Start-HLSL-Playground.cmd** at the root of that folder.
-3. The launcher starts a loopback-only **PowerShell/.NET** compiler bridge and opens your browser to `http://127.0.0.1:<port>/`. Use this new tab, not a `file://` tab. The **Julia animation** preset is loaded automatically.
-4. Click **Compile & Run HLSL** or press **Ctrl+Enter** in the editor. The 2D GPU mask is shown directly alongside the code. Select **Array transform** to try scalar output.
-5. Expand **Resource bindings & dispatch** to edit the circle center/radius, then rerun. Raw outputs and generated WGSL are available in the collapsed output inspectors. The separate particle and WGSL labs are under **Other labs**.
-6. Close the tab or click **Close playground & stop server**. The local host exits when the last connected playground tab closes. If the browser crashes, a heartbeat timeout closes it automatically.
+1. Extract the **entire** v1.8.0 ZIP to a new folder.
+2. Double-click **Start-HLSL-Playground.cmd**. The Windows PowerShell/.NET compiler host opens a localhost browser tab.
+3. Choose **Julia animation** (default) or **GPU particles**. Click **Animate** to see the shader change over time. Pause, Step, Reset and Resume control repeated WebGPU compute dispatches.
+4. Click **Compile & Run HLSL** for a single GPU frame. Output, source code, error diagnostics and generated WGSL are inspectable.
+5. Closing the final browser tab or ending the session stops the compiler host. Hidden tabs automatically pause animation.
 
-**No installation required** of Zig, Rust, Cargo or Node. The ZIP includes Microsoft DXC and a prebuilt Naga shader translator, while the host uses the Windows PowerShell and .NET runtime. Neither the package nor the launcher runs the previously flagged `hlsl-server.exe` Zig binary.
+No Node, Zig or Rust installation is required; the full Windows ZIP includes DXC and Naga. The previously quarantined Zig `hlsl-server.exe` is neither bundled nor launched.
 
-**From a source checkout:** update your clone (`git pull`) and double-click the CMD launcher. If the compiler tools are missing, the launcher downloads the **compiler-only** v1.5.0 ZIP, verifies its pinned SHA-256 and caches it in your per-user application-data directory. It does not download a custom server EXE.
+## Pure-HLSL-defined pixels and animation
+
+The two new presets provide actual **RGBA framebuffer output written by HLSL**. The host does not recolor particle positions or synthesize a picture in JavaScript.
+
+Your HLSL source controls output resolution, pixel color, and how the pixel values change over time:
+
+~~~hlsl
+#define WORKBENCH_WIDTH 256
+#define WORKBENCH_HEIGHT 256
+
+cbuffer WorkbenchFrame : register(b7)
+{
+    float Time;
+    float DeltaTime;
+    float Width;
+    float Height;
+    float Frame;
+    float Padding0;
+    float Padding1;
+    float Padding2;
+};
+
+RWStructuredBuffer<float4> Framebuffer : register(u0);
+
+[numthreads(8,8,1)]
+void CSMain(uint3 tid : SV_DispatchThreadID)
+{
+    if (tid.x >= WORKBENCH_WIDTH || tid.y >= WORKBENCH_HEIGHT) return;
+    uint i = tid.y * WORKBENCH_WIDTH + tid.x;
+    float2 uv = (float2(tid.xy) + 0.5f) /
+                float2(WORKBENCH_WIDTH, WORKBENCH_HEIGHT);
+    Framebuffer[i] = float4(uv.x, uv.y, 0.4f + 0.4f*sin(Time), 1.0f);
+}
+~~~
+
+No `animation` JSON manifest is required. The client recognizes `Framebuffer:u0` and `WorkbenchFrame:b7` in the HLSL text, reads `WORKBENCH_WIDTH` and `WORKBENCH_HEIGHT`, and allocates a `float4` array for the output. DXC maps `u0` to WGSL binding **16** and `b7` to binding **39**. On each frame, JavaScript supplies `Time`, `DeltaTime`, and `Frame`; it dispatches the shader and displays the **actual red, green, blue and alpha values read back from WebGPU**. It does not choose a palette or compute the pixel colors.
+
+The HLSL output contract is intentionally narrow: up to 512×512, maximum 4 MiB of float4 pixels, shader entry `CSMain` and explicitly defined framebuffer/time registers. An HLSL program cannot schedule browser animation frames or create its own graphics canvas; the JavaScript host still controls those operations. Existing advanced JSON buffer manifests remain available for other compute shader layouts.
+
+The examples `julia-rgba.hlsl` and `particles-rgba.hlsl` are fully editable. The **GPU particles** shader procedurally animates 24 independently moving dots with RGB colors and glow, rather than solving inter-particle physics. The independent JavaScript physics sandbox under **Other labs** is still a separate teaching tool.
+
+**From a source checkout:** run `git pull` and `Start-HLSL-Playground.cmd`. The first run downloads checksum-pinned DXC/Naga compiler-only tools when necessary. Do not restore old custom Zig server binaries.
 
 ## See what your HLSL shader actually produced
 
@@ -51,7 +91,7 @@ The mask example uses an explicit `EdgeWidth` instead of `fwidth()` because the 
 
 The HLSL editor colors known types, keywords, comments, numbers, functions, resources, registers and variable identifiers without requiring IntelliSense or any editor download. The editable source remains a native textarea; the syntax layer is only visual. The GPU plot uses a larger area with less empty padding while preserving correct X/Y geometry. Collapsed sections use chevrons, not add/remove icons.
 
-## Continuous HLSL animation (new in v1.7.0)
+## Continuous HLSL animation (new in v1.8.0)
 
 The **Julia animation** preset is ready on startup. Press **Animate** to compile HLSL once and repeatedly dispatch it through WebGPU. This is not a static image or a simulated JavaScript replay.
 
@@ -119,4 +159,4 @@ Opening `playground/index.html` directly without the launcher provides the JavaS
 
 The repository's Windows CI runs `node playground/test-powershell.mjs` **only as a test client**, including real DXC/Naga compilation through the PowerShell HTTP API. Users do not need Node.
 
-[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.7.0.md)
+[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.8.0.md)
