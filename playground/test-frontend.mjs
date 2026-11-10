@@ -55,6 +55,16 @@ assert.equal(ids.filter(id=>id==="wgsl-output").length,1);
 assert.ok(ids.includes("generated-wgsl"),"Generated WGSL needs its own dedicated panel.");
 assert.ok(html.includes('id="gpu-visual" width="640" height="640"'),"GPU chart must have square native resolution.");
 assert.ok(html.includes('class="workspace-grid"'),"Editor and preview should form one focused workbench.");
+const presetLoop=runner.match(/for\(const id of \[(.*?)\]\)\s*\$\(id\)\.setAttribute\("aria-pressed"/s);
+assert.ok(presetLoop,"Active-preset UI code missing.");
+const declaredPresetIds=[...presetLoop[1].matchAll(/"([^"]+)"/g)].map(x=>x[1]);
+for(const id of declaredPresetIds){
+  assert.ok(ids.includes(id),"CRITICAL: setActivePreset accesses missing DOM element "+id);
+}
+assert.ok(ids.includes("restore-example"),"GPU particle preset must use its real DOM ID.");
+assert.ok(!declaredPresetIds.includes("example-rgba-particles"),
+  "Never use nonexistent example-rgba-particles button in startup initializer.");
+
 assert.ok(html.includes('id="code-highlight"'),"Syntax mirror element missing");
 assert.ok(html.includes('id="code-highlight-content"'),"Syntax coloring content missing");
 assert.ok(css.includes(".tok-keyword")&&css.includes(".tok-identifier")&&css.includes(".tok-number"),"Token palette missing");
