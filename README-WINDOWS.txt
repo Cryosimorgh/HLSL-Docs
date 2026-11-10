@@ -1,16 +1,16 @@
-HLSL Playground v1.6.1 — one-click Windows client
+HLSL Playground v1.7.0 — one-click Windows client
 
 HOW TO RUN
-1. Download HLSL-Playground-Windows-v1.6.1.zip from
-   https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.6.1
+1. Download HLSL-Playground-Windows-v1.7.0.zip from
+   https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.7.0
 2. Extract the entire ZIP to a new folder.
 3. Double-click Start-HLSL-Playground.cmd.
    The editor supports syntax coloring while retaining regular text editing.
 4. The launcher starts a localhost server using the Windows PowerShell/.NET
    runtime already included in Windows. A browser tab opens automatically.
-5. The "Circle mask" preset loads automatically. Click "Compile & Run HLSL" to see the GPU
-   output heatmap next to the editor. Change the radius in the b0 uniform data and run again.
-   Alternatively, click "Array example" to see output as a bar chart.
+5. The "Julia animation" preset loads automatically. Click "Animate" to see the GPU
+   fractal change continuously next to the editor. Pause, Step, Reset and Resume are available.
+   Alternatively, choose "Circle mask" or "Array transform" for static tests.
    The host uses DXC + Naga to generate WGSL, and WebGPU runs it on your GPU.
 6. Close the tab or press Close playground to stop the local server.
 
