@@ -5,6 +5,8 @@ on:
     paths:
       - 'playground/index.html'
       - 'playground/workbench.css'
+      - 'playground/hlsl-highlight.js'
+      - 'playground/test-hlsl-highlight.mjs'
       - 'playground/live-runner.js'
       - 'playground/gpu-visualizer.js'
       - 'playground/test-gpu-visualizer.mjs'
@@ -27,3 +29,4 @@ jobs:
         run: |
           node playground/test-frontend.mjs
           node playground/test-gpu-visualizer.mjs
+          node playground/test-hlsl-highlight.mjs
