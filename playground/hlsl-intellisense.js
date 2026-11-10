@@ -186,8 +186,9 @@
   // Parses the innermost open function call, counts its top-level comma
   // separators, and returns known (curated or locally declared) signatures.
   function signatureAt(source,pos){
-    const lines=source.split("\n"),before=lines.slice(0,pos.line+1).join("\n")
-      .slice(0,-Math.max(0,(lines[pos.line]||"").length-pos.ch)).slice(-1800);
+    const lines=source.split("\n");
+    const before=(lines.slice(0,pos.line).join("\n")+(pos.line?"\n":"")+
+      (lines[pos.line]||"").slice(0,pos.ch)).slice(-1800);
     const stripped=clean(before);
     const stack=[];let i=0;
     for(;i<stripped.length;i++){
