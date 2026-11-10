@@ -301,6 +301,40 @@ h3{font-size:14px;font-weight:630;margin:14px 0 8px}
 .editor-frame.has-codemirror .cm-meta{color:#d1a5c5}
 .editor-frame.has-codemirror .cm-string{color:#a6ceaa}
 .editor-frame.has-codemirror .cm-operator{color:#b2bcc8}
+/* Offline HLSL completion dropdown and function signature popover. */
+.CodeMirror-hints{
+  z-index:140;box-sizing:border-box;min-width:255px;max-width:min(480px,90vw);
+  max-height:285px;overflow:auto;background:#1d2732;border:1px solid #526173;
+  border-radius:6px;box-shadow:0 10px 32px rgba(0,0,0,.5);
+  padding:4px;scrollbar-color:#566779 #1d2732;
+  color:#dde7ef;font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace
+}
+.CodeMirror-hint{
+  box-sizing:border-box;display:flex;align-items:baseline;gap:11px;
+  padding:6px 9px;border-radius:3px;white-space:nowrap;max-width:100%;
+  color:#d9e6ef
+}
+.CodeMirror-hint-active{background:#33506b;color:#fff}
+.hlsl-hint-name{min-width:0;overflow:hidden;text-overflow:ellipsis;color:#c5d9ef;font-weight:600}
+.hlsl-hint-type .hlsl-hint-name,.hlsl-hint-resource .hlsl-hint-name{color:#94ccdc}
+.hlsl-hint-function .hlsl-hint-name,.hlsl-hint-intrinsic .hlsl-hint-name{color:#ecc284}
+.hlsl-hint-macro .hlsl-hint-name{color:#dcb5d7}
+.hlsl-hint-kind{color:#a0afbe;font-size:10px;margin-left:auto}
+.hlsl-hint-description{max-width:210px;overflow:hidden;text-overflow:ellipsis;color:#95a7b7;font-size:10px}
+.CodeMirror-hint-active .hlsl-hint-kind,.CodeMirror-hint-active .hlsl-hint-description{color:#c3d0de}
+.hlsl-signature-help{
+  position:fixed;z-index:130;box-sizing:border-box;width:min(420px,calc(100vw - 20px));
+  border:1px solid #65778a;border-radius:6px;padding:10px 12px;
+  background:#25303b;color:#e2e9ef;box-shadow:0 10px 28px rgba(0,0,0,.42);
+  font:12px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace;
+  pointer-events:none
+}
+.hlsl-signature-help[hidden]{display:none}
+.signature-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px}
+.signature-head strong{color:#ebc487}
+.signature-head span{color:#adc2d6;font-size:11px}
+.hlsl-signature-help>code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;color:#d6e7f6}
+.hlsl-signature-help p{margin:7px 0 0;color:#bdcad5;font:11px/1.5 system-ui,sans-serif}
 .editor-frame.has-codemirror .CodeMirror-matchingbracket{
   color:#eac78d!important;outline:1px solid #63788f
 }
