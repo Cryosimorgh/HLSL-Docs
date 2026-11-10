@@ -4,7 +4,7 @@
 "use strict";
 const $ = id => document.getElementById(id);
 const editor = $("code"), manifestArea = $("bindings"), status = $("compile-status"),
-      results = $("gpu-output"), wgslArea = $("wgsl-output"), runButton = $("run-gpu");
+      results = $("gpu-output"), wgslArea = $("generated-wgsl"), runButton = $("run-gpu");
 const maxBytes = 4*1024*1024, maxTotal = 8*1024*1024, maxGroups = 1024;
 const isBridgeOrigin = /^http:\/\/127\.0\.0\.1:\d+$/.test(location.origin);
 
@@ -79,7 +79,8 @@ window.addEventListener("visibilitychange", () => {
 $("close-playground").addEventListener("click", () => { void closePlayground(); });
 
 function setStatus(message,error=false) {
-  status.textContent=message; status.style.color=error?"#ffa8a8":"#9ce3ff";
+  status.textContent=message;
+  status.classList.toggle("is-error",error);
 }
 function defaultManifest() {
   return {entry:"CSMain",dispatch:"auto",resources:[
@@ -142,7 +143,7 @@ function particles() {
 function gridConfig(spec) {
   const r=spec.resources.find(r=>r.preset==="grid");
   return r?.grid||{
-    width:32,height:32,xMax:window.HLSLPlayground.config().worldWidth,yMax:1
+    width:32,height:32,xMax:1,yMax:1
   };
 }
 function gridPoints(g) {
@@ -210,7 +211,7 @@ async function run(){
   if(!navigator.gpu)throw Error("No WebGPU support. Use a compatible Chromium/Edge browser and GPU.");
   const spec=parseManifest(),source=editor.value;
   if(!source||source.length>65536)throw Error("HLSL source must be 1-65536 characters.");
-  setStatus("Compiling HLSL using DXC, then converting SPIR-V to WGSL…");
+  setStatus("Compiling · DXC → Naga → WebGPU…");
   results.textContent="";wgslArea.textContent="";
   window.HLSLGPUVisualize.clear();
   const response=await fetch("/api/compile",{method:"POST",headers:{"Content-Type":"application/json"},
@@ -294,7 +295,8 @@ async function run(){
     }
     if(preview)window.HLSLGPUVisualize.render(preview);
     results.textContent=lines.join("\n");
-    setStatus("GPU run succeeded. Review buffer output below.");
+    $("debug-output-panel").open=false;
+    setStatus("Completed · GPU output ready for inspection.");
   }finally{
     for(const r of readbacks)r.mapped.destroy();
     for(const a of allocations)a.buffer.destroy();
@@ -303,17 +305,38 @@ async function run(){
 }
 runButton.addEventListener("click",async()=>{
   runButton.disabled=true;
+  const label=runButton.textContent;
+  runButton.textContent="Running…";
   try{await run()}
-  catch(e){window.HLSLGPUVisualize.clear();results.textContent=String(e.stack||e);setStatus("Run failed: "+e.message,true)}
-  finally{runButton.disabled=false}
+  catch(e){
+    window.HLSLGPUVisualize.clear();
+    results.textContent=String(e.stack||e);
+    $("debug-output-panel").open=true;
+    setStatus("Run failed: "+e.message,true);
+  }finally{
+    runButton.disabled=false;
+    runButton.textContent=label;
+  }
 });
+editor.addEventListener("keydown",e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){
+    e.preventDefault();
+    if(!runButton.disabled)runButton.click();
+  }
+});
+function setActivePreset(which){
+  for(const id of ["example-circle","example-scale","restore-example"])
+    $(id).setAttribute("aria-pressed",String(id===which));
+}
 $("restore-example").addEventListener("click",()=>{
+  setActivePreset("restore-example");
   editor.dataset.dirty="";
   window.HLSLPlayground.restoreExample();
   manifestArea.value=JSON.stringify(defaultManifest(),null,2);
   setStatus("Restored particle HLSL shader and bindings.");
 });
 $("example-scale").addEventListener("click",()=>{
+  setActivePreset("example-scale");
   editor.value=[
     "// Editable HLSL: this kernel doubles eight input floats.",
     "StructuredBuffer<float> Input : register(t0);",
@@ -334,7 +357,8 @@ $("example-scale").addEventListener("click",()=>{
   setStatus("Loaded array-scaling example. Edit it and click Run on GPU.");
 });
 $("example-circle").addEventListener("click",()=>{
-  const grid={width:32,height:32,xMax:window.HLSLPlayground.config().worldWidth,yMax:1};
+  setActivePreset("example-circle");
+  const grid={width:32,height:32,xMax:1,yMax:1};
   editor.value=[
     "// Circle mask: values come from a 32×32 2D GPU sample grid.",
     "// t0: float4 positions; u0: float4(x,y,mask,0); b0: circle params.",
@@ -377,11 +401,18 @@ $("example-circle").addEventListener("click",()=>{
   },null,2);
   window.HLSLGPUVisualize.clear();
   results.textContent="Circle mask loaded. Click Compile & Run HLSL to see the real GPU mask.";
-  setStatus("Circle mask ready: 32×32 points, radius 0.34, softness 0.025. Change b0 uniform data and rerun.");
+  setStatus("Circle mask · 32×32 grid ready. Run to inspect.");
 });
-$("show-wgsl").addEventListener("change",e=>wgslArea.hidden=!e.target.checked);
-setStatus(isBridgeOrigin?
-  "Ready: edit HLSL, compile with DXC + Naga through the local PowerShell host, execute using WebGPU.":
-  "Offline code editor ready. Use Start-HLSL-Playground.cmd to enable DXC/Naga HLSL compilation.");
+const wgslDetails=$("wgsl-details"),wgslToggle=$("show-wgsl");
+wgslToggle.addEventListener("change",e=>{
+  wgslArea.hidden=!e.target.checked;
+  if(e.target.checked)wgslDetails.open=true;
+});
+wgslDetails.addEventListener("toggle",()=>{
+  wgslToggle.checked=wgslDetails.open;
+  wgslArea.hidden=!wgslDetails.open;
+});
+$("example-circle").click();
+if(!isBridgeOrigin)setStatus("Offline preview · launch Start-HLSL-Playground.cmd to run HLSL.");
 void openLease();
 })();
