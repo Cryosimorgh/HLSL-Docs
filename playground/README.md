@@ -1,10 +1,10 @@
 # HLSL Workbench — GPU Compute and Continuous Animation
 
-**[Download complete Windows Workbench v1.8.2](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.8.2/HLSL-Playground-Windows-v1.8.2.zip)** · [Release notes](../RELEASE_NOTES_v1.8.2.md) · [HLSL Handbook](../HLSL-Handbook.md)
+**[Download complete Windows Workbench v1.8.3](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.8.3/HLSL-Playground-Windows-v1.8.3.zip)** · [Release notes](../RELEASE_NOTES_v1.8.3.md) · [HLSL Handbook](../HLSL-Handbook.md)
 
 ## Run the Windows client
 
-1. Extract the **entire** v1.8.2 ZIP to a new folder.
+1. Extract the **entire** v1.8.3 ZIP to a new folder.
 2. Double-click **Start-HLSL-Playground.cmd**. The Windows PowerShell/.NET compiler host opens a localhost browser tab.
 3. Choose **Julia animation** (default) or **GPU particles**. Click **Animate** to see the shader change over time. Pause, Step, Reset and Resume control repeated WebGPU compute dispatches.
 4. Click **Compile & Run HLSL** for a single GPU frame. Output, source code, error diagnostics and generated WGSL are inspectable.
@@ -12,13 +12,17 @@
 
 No Node, Zig or Rust installation is required; the full Windows ZIP includes DXC and Naga. The previously quarantined Zig `hlsl-server.exe` is neither bundled nor launched.
 
-## Foldable code and inline reference
+## Code folding and inline HLSL documentation
 
-The editor starts with collapsible HLSL code sections. Use **Fold all**, **Unfold all**, or **Full editor**. Expanded sections have an **Edit section** button; edits modify the shader that is actually compiled. Hover a recognized HLSL symbol for short **What / Does / Use** explanations, a separate HLSL code example, and a link to the searchable [offline reference](hlsl-reference.html). Press **F1** on a recognized term in the full editor.
+The HLSL editor uses a **single editable code surface** (CodeMirror 5) with line numbers and VS Code-style gutter chevrons. Click the arrow next to `cbuffer`, a function, a control block, or another brace-delimited HLSL section to collapse its body to an inline ellipsis. **Fold all** and **Unfold all** operate on the same source. Edits always update the shader compiled by DXC; no detached cards or separate editing areas are involved.
+
+Hover a recognized HLSL symbol for concise **What / Does / Use** explanations, a **separate code example**, and a link to the searchable [offline HLSL reference](hlsl-reference.html). Press **F1** on a recognized term to open help. This is a curated reference, not IntelliSense for arbitrary user-defined names.
+
+The complete Windows ZIP contains the CodeMirror editor and fold plugins under `vendor/codemirror/`, together with its MIT license. Source checkouts without these offline vendor files retain the native text editor until the developer runs `node playground/install-editor-vendor.mjs`; end users do not need Node or npm.
 
 ## Verify the startup source
 
-v1.8.2 fixes a critical v1.8.0 startup error where a nonexistent preset-button ID prevented the Julia shader from loading. On startup the editor must show `#define WORKBENCH_WIDTH 256` and `RWStructuredBuffer<float4> Framebuffer : register(u0)`. If you see the old `struct Ball` shader, you are using an outdated browser tab or package. Use a fresh v1.8.2 extraction and the new tab opened by its CMD launcher.
+v1.8.3 fixes a critical v1.8.0 startup error where a nonexistent preset-button ID prevented the Julia shader from loading. On startup the editor must show `#define WORKBENCH_WIDTH 256` and `RWStructuredBuffer<float4> Framebuffer : register(u0)`. If you see the old `struct Ball` shader, you are using an outdated browser tab or package. Use a fresh v1.8.3 extraction and the new tab opened by its CMD launcher.
 
 A real Chromium test now checks this on every frontend change, including switching between Julia and GPU particles and preserving the editor when the independent JavaScript sandbox settings change.
 
@@ -101,7 +105,7 @@ The mask example uses an explicit `EdgeWidth` instead of `fwidth()` because the 
 
 The HLSL editor colors known types, keywords, comments, numbers, functions, resources, registers and variable identifiers without requiring IntelliSense or any editor download. The editable source remains a native textarea; the syntax layer is only visual. The GPU plot uses a larger area with less empty padding while preserving correct X/Y geometry. Collapsed sections use chevrons, not add/remove icons.
 
-## Continuous HLSL animation (new in v1.8.2)
+## Continuous HLSL animation (new in v1.8.3)
 
 The **Julia animation** preset is ready on startup. Press **Animate** to compile HLSL once and repeatedly dispatch it through WebGPU. This is not a static image or a simulated JavaScript replay.
 
@@ -169,4 +173,4 @@ Opening `playground/index.html` directly without the launcher provides the JavaS
 
 The repository's Windows CI runs `node playground/test-powershell.mjs` **only as a test client**, including real DXC/Naga compilation through the PowerShell HTTP API. Users do not need Node.
 
-[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.8.2.md)
+[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.8.3.md)
