@@ -363,7 +363,7 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
     function shaderText() { return document.getElementById("code").value; }
     function updateShader() {
         const node = document.getElementById("code");
-        if (!node.dataset.dirty) node.value = exampleShaderText();
+        if (!node.dataset.dirty) { node.value = exampleShaderText(); window.HLSLHighlight?.refresh(); }
     }
     function draw() {
         const w = canvas.width, h = canvas.height;
