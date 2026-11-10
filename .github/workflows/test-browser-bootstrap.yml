@@ -17,15 +17,12 @@ permissions:
 
 jobs:
   chromium-boot:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Load real HTML and deferred scripts in Chrome or Edge
-        shell: pwsh
-        run: |
-          node playground/test-browser-bootstrap.mjs
-          if ($LASTEXITCODE -ne 0) { throw 'Browser startup regression failed' }
+      - name: Load real HTML and deferred scripts in headless Chromium
+        run: node playground/test-browser-bootstrap.mjs
