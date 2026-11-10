@@ -338,17 +338,31 @@ h3{font-size:14px;font-weight:630;margin:14px 0 8px}
 .editor-frame.has-codemirror .CodeMirror-matchingbracket{
   color:#eac78d!important;outline:1px solid #63788f
 }
+.editor-shortcuts{
+  display:flex;flex-wrap:wrap;gap:7px 15px;align-items:center;
+  border-top:1px solid var(--border-soft);padding:8px 14px;
+  background:#141d27;color:#a8b7c6;font:11px/1.5 system-ui,sans-serif;
+}
+.editor-shortcuts span{white-space:nowrap}
+.editor-shortcuts kbd{display:inline-block;font:10px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;
+  padding:1px 4px;border:1px solid #455365;border-radius:3px;
+  background:#1f2b39;color:#e2c28f;margin-right:4px}
+.hlsl-help-close{cursor:pointer;border:1px solid #566577;color:#cad4df;
+  background:#2a3949;border-radius:4px;min-width:25px;min-height:23px;
+  font:18px/1 sans-serif;padding:0 5px}
+.hlsl-help-close:hover{background:#435466}
 .hlsl-help-tooltip{
   position:fixed;z-index:100;box-sizing:border-box;width:min(375px,calc(100vw - 18px));
   max-height:min(560px,85vh);overflow:auto;padding:15px 16px 13px;
   background:#222a34;border:1px solid #7c8794;border-radius:8px;color:#dfe6ec;
+  user-select:text;pointer-events:auto;z-index:250;
   box-shadow:0 8px 35px rgba(0,0,0,.5);font:12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif
 }
 .hlsl-help-tooltip[hidden]{display:none}
 .doc-tooltip-head{display:flex;align-items:start;justify-content:space-between;gap:14px;
   padding-bottom:9px;border-bottom:1px solid #414d5a;margin-bottom:10px}
 .doc-tooltip-head strong{font-size:14px;color:#f0d09a}
-.doc-tooltip-head span{font-size:10px;color:#a7b7c9;white-space:nowrap}
+.doc-tooltip-head span{font-size:10px;color:#a7b7c9;white-space:nowrap;flex:1}
 .hlsl-help-tooltip p{margin:6px 0;line-height:1.45}
 .hlsl-help-tooltip p b{display:inline-block;color:#f0d09a;min-width:42px}
 .doc-example-label{margin:12px 0 5px;color:#b7c5d3;font-size:11px}
