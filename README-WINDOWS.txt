@@ -1,8 +1,8 @@
-HLSL Playground v1.8.0 — one-click Windows client
+HLSL Playground v1.8.1 — one-click Windows client
 
 HOW TO RUN
-1. Download HLSL-Playground-Windows-v1.8.0.zip from
-   https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.8.0
+1. Download HLSL-Playground-Windows-v1.8.1.zip from
+   https://github.com/Cryosimorgh/HLSL-Docs/releases/tag/v1.8.1
 2. Extract the entire ZIP to a new folder.
 3. Double-click Start-HLSL-Playground.cmd.
    The editor supports syntax coloring while retaining regular text editing.
@@ -16,6 +16,12 @@ HOW TO RUN
    No animation JSON manifest is required for either of these examples.
    The host uses DXC + Naga to generate WGSL, and WebGPU runs it on your GPU.
 6. Close the tab or press Close playground to stop the local server.
+
+VERIFY THE CORRECT CLIENT
+- The first HLSL lines should include #define WORKBENCH_WIDTH 256.
+- They should NOT begin with // Sample host cbuffer values or struct Ball.
+- If you see the old physics shader, close the tab, extract v1.8.1 in a
+  fresh folder, and run that folder's CMD file.
 
 NO INSTALLATION NEEDED
 - No Rust/Cargo installation.
