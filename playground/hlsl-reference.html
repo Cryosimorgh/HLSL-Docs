@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d1117">
+<title>HLSL Quick Reference — HLSL Workbench</title>
+<link rel="stylesheet" href="workbench.css">
+<style>
+.reference-wrap{max-width:980px;margin:auto;padding:30px 22px 80px}
+.reference-head{border-bottom:1px solid var(--border);padding-bottom:22px;margin-bottom:20px}
+.reference-head h1{font-size:30px;margin:10px 0}
+.reference-head p{color:var(--muted);font-size:14px;margin:0 0 12px}
+.reference-search{width:100%;max-width:440px;padding:10px 14px;border:1px solid var(--border);background:var(--surface);border-radius:7px;color:var(--ink);margin:12px 0 20px}
+.reference-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:16px}
+.reference-entry{scroll-margin-top:30px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px 18px}
+.reference-entry:target{border-color:var(--accent)}
+.reference-entry h2{font-size:17px;margin:0 0 10px;color:var(--accent)}
+.reference-entry p{margin:4px 0;font-size:13px;color:var(--text)}
+.reference-entry p strong{color:var(--ink);font-size:12px;min-width:45px;display:inline-block}
+.reference-entry pre{padding:13px;margin-top:12px;background:var(--editor);border:1px solid var(--border-soft);max-height:none;border-radius:5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.reference-entry code{font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace}
+.reference-caption{font-size:11px;color:var(--muted);margin:14px 0 4px}
+</style>
+</head>
+<body>
+<main class="reference-wrap">
+<header class="reference-head">
+<a href="index.html">← Back to HLSL Workbench</a>
+<h1>HLSL quick reference</h1>
+<p>Short explanations of common shader terms. Hover a known symbol in the Workbench editor for the same help. Examples are separate and editable only when copied into your shader.</p>
+<label for="reference-search">Find a term</label>
+<input id="reference-search" class="reference-search" type="search" placeholder="Search HLSL terms" autocomplete="off">
+</header>
+<div id="reference-list" class="reference-list" aria-live="polite"></div>
+</main>
+<script src="hlsl-docs-data.js"></script>
+<script src="hlsl-reference.js"></script>
+</body>
+</html>
