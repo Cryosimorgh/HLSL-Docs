@@ -457,7 +457,8 @@ window.HLSLRunnerAPI={
   isBridgeOrigin,setStatus,setActivePreset,parseManifest,bytesFor,
   gridConfig,compiledEntry,compiledSize,showBuffer,inferFramebufferSpec
 };
-$("example-circle").click();
+// Do not install a legacy shader during startup. animation-runner.js owns
+// the initial source selection and the matching manifestless framebuffer mode.
 if(!isBridgeOrigin)setStatus("Offline preview · launch Start-HLSL-Playground.cmd to run HLSL.");
 void openLease();
 })();
