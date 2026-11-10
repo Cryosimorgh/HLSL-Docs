@@ -107,6 +107,11 @@ try {
     await exited();
     assert.equal(ps.exitCode,0,"Server crashed: "+stderr);
     console.log("PASS PowerShell bridge: routes, request guards, 2 tabs, clean exit"+(integration?", real DXC+Naga compile":""));
+}catch(error){
+    console.error("PowerShell HTTP test failed:",error);
+    console.error("SERVER STDERR:",stderr.slice(-12000));
+    console.error("SERVER STDOUT:",stdout.slice(-12000));
+    throw error;
 }finally{
     if(ps.exitCode===null && ps.signalCode===null)ps.kill();
     await rm(temp,{recursive:true,force:true});
