@@ -41,12 +41,13 @@ const dir=await mkdtemp(join(tmpdir(),"hlsl-browser-"));
 const child=spawn(binary,[
   "--headless=new","--no-first-run","--no-default-browser-check",
   "--disable-extensions","--disable-background-networking","--no-sandbox",
-  "--disable-gpu","--remote-debugging-port=0","--user-data-dir="+dir,"about:blank"
+  "--disable-gpu","--disable-dev-shm-usage","--disable-breakpad",
+  "--remote-debugging-port=0","--user-data-dir="+dir,"about:blank"
 ],{stdio:"ignore",windowsHide:true});
 let socket;
 try{
   let port=0;
-  for(let i=0;i<150;i++){
+  for(let i=0;i<400;i++){
     if(child.exitCode!==null)throw Error("Browser exited on startup: "+child.exitCode);
     try{port=Number((await readFile(join(dir,"DevToolsActivePort"),"utf8")).split(/\r?\n/)[0]);}catch{}
     if(port)break;
