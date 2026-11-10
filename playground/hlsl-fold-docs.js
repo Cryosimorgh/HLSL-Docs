@@ -111,10 +111,31 @@
     return null;
   }
 
-  let activeKey="",cm;
-  function hide(){tooltip.hidden=true;activeKey="";}
-  function show(item,clientX,clientY){
-    if(!item)return hide();
+  let activeKey="",cm,pinned=false,hideTimer=0;
+  const pinState=$("hlsl-help-pin-state");
+  function cancelHide(){if(hideTimer){clearTimeout(hideTimer);hideTimer=0;}}
+  function hide(force=false){
+    if(pinned&&!force)return;
+    cancelHide();
+    tooltip.hidden=true;activeKey="";
+    if(force)pinned=false;
+    if(pinState)pinState.textContent="";
+  }
+  function scheduleHide(){
+    if(pinned)return;
+    cancelHide();
+    hideTimer=setTimeout(()=>{
+      hideTimer=0;
+      if(!tooltip.matches(":hover")&&!cm.getWrapperElement().matches(":hover"))
+        hide();
+    },300);
+  }
+  function show(item,clientX,clientY,pin=false){
+    if(!item){scheduleHide();return;}
+    if(pinned&&!pin)return;
+    cancelHide();
+    if(pin)pinned=true;
+    if(pinState)pinState.textContent=pinned?"Pinned · Esc or × to close":"Hover or right-click to pin";
     if(activeKey!==item.key){
       activeKey=item.key;
       help.title.textContent=item.title+" · "+item.key;
@@ -223,20 +244,52 @@
   foldAllButton?.addEventListener("click",foldAll);
   unfoldAllButton?.addEventListener("click",unfoldAll);
   cm.getWrapperElement().addEventListener("mousemove",event=>{
+    if(pinned)return;
     const pos=cm.coordsChar({left:event.clientX,top:event.clientY},"window");
-    show(wordAt(cm,pos),event.clientX,event.clientY);
+    const item=wordAt(cm,pos);
+    if(item)show(item,event.clientX,event.clientY);
+    else scheduleHide();
   });
   cm.getWrapperElement().addEventListener("mouseleave",event=>{
-    if(!tooltip.contains(event.relatedTarget))hide();
+    if(tooltip.contains(event.relatedTarget)){cancelHide();return;}
+    scheduleHide();
   });
-  cm.on("scroll",hide);
-  cm.on("cursorActivity",hide);
-  tooltip.addEventListener("mouseleave",hide);
-  document.addEventListener("keydown",event=>{if(event.key==="Escape")hide();});
-  window.addEventListener("blur",hide);
+  // Right-clicking a recognized HLSL token pins its reference and suppresses
+  // the normal browser menu, leaving examples and documentation links usable.
+  cm.getWrapperElement().addEventListener("contextmenu",event=>{
+    const pos=cm.coordsChar({left:event.clientX,top:event.clientY},"window");
+    const item=wordAt(cm,pos);
+    if(!item)return;
+    event.preventDefault();
+    event.stopPropagation();
+    show(item,event.clientX,event.clientY,true);
+  });
+  tooltip.addEventListener("mouseenter",cancelHide);
+  tooltip.addEventListener("mouseleave",scheduleHide);
+  tooltip.addEventListener("contextmenu",event=>{
+    event.preventDefault();
+    event.stopPropagation();
+    if(!tooltip.hidden){
+      pinned=true;cancelHide();
+      if(pinState)pinState.textContent="Pinned · Esc or × to close";
+    }
+  });
+  $("hlsl-help-close")?.addEventListener("click",()=>hide(true));
+  document.addEventListener("pointerdown",event=>{
+    if(pinned&&!tooltip.contains(event.target)&&
+       !cm.getWrapperElement().contains(event.target))hide(true);
+  },true);
+  cm.on("scroll",scheduleHide);
+  cm.on("cursorActivity",scheduleHide);
+  document.addEventListener("keydown",event=>{
+    if(event.key==="Escape")hide(true);
+  });
+  window.addEventListener("blur",()=>hide(true));
   window.HLSLFoldDocs={
     editor:cm,refresh,foldAll,unfoldAll,
     showHelp:key=>{const item=docs.get(key);if(item)show(item,160,100);return !!item;},
+    get helpPinned(){return pinned;},
+    dismissHelp:()=>hide(true),
     getFoldRange:line=>rangeFinder(cm,CM.Pos(line,0))
   };
   refresh();
