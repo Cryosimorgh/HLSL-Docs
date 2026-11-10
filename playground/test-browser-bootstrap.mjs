@@ -91,12 +91,14 @@ try{
     await sleep(100);
   }
   assert.ok(ready,"Main page and animation script did not load.");
-  const startup=await evaluate('({src:document.getElementById("code").value,selected:document.getElementById("example-julia").getAttribute("aria-pressed"),automatic:window.HLSLRunnerAPI.parseManifest().autoFramebuffer,mode:window.HLSLRunnerAPI.parseManifest().resources[0].visualize.mode,manifest:document.getElementById("bindings").value})');
+  const startup=await evaluate('({src:document.getElementById("code").value,selected:document.getElementById("example-julia").getAttribute("aria-pressed"),spec:(()=>{try{return JSON.stringify(window.HLSLRunnerAPI.parseManifest())}catch(e){return "ERROR: "+e.message}})(),manifest:document.getElementById("bindings").value})');
+  console.log("BOOT-DIAGNOSTIC",JSON.stringify({sourceHead:startup.src.slice(0,180),selected:startup.selected,spec:startup.spec.slice(0,450),manifest:startup.manifest.slice(0,180),exceptions:failures}));
   assert.match(startup.src,/FractalColor/,"The Julia shader MUST appear at startup, not the legacy physics shader.");
   assert.match(startup.src,/RWStructuredBuffer<float4> Framebuffer/);
   assert.equal(startup.selected,"true");
-  assert.equal(startup.automatic,true);
-  assert.equal(startup.mode,"grid-rgba");
+  const parsed=JSON.parse(startup.spec);
+  assert.equal(parsed.autoFramebuffer,true);
+  assert.equal(parsed.resources[0].visualize.mode,"grid-rgba");
   assert.ok(!JSON.parse(startup.manifest).animation,"No animation JSON should be present.");
 
   const particle=await evaluate('(()=>{document.getElementById("restore-example").click();return {src:document.getElementById("code").value,automatic:window.HLSLRunnerAPI.parseManifest().autoFramebuffer,selected:document.getElementById("restore-example").getAttribute("aria-pressed")};})()');
