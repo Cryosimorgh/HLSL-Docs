@@ -10,9 +10,16 @@ const animation=await readFile(root+"animation-runner.js","utf8");
 const browserGpu=await readFile(root+"browser-gpu.js","utf8");
 const visualizer=await readFile(root+"gpu-visualizer.js","utf8");
 const hlslHighlight=await readFile(root+"hlsl-highlight.js","utf8");
+const folds=await readFile(root+"hlsl-fold-docs.js","utf8");
+const docsData=await readFile(root+"hlsl-docs-data.js","utf8");
+const docsReference=await readFile(root+"hlsl-reference.js","utf8");
+const docsPage=await readFile(root+"hlsl-reference.html","utf8");
 const css=await readFile(root+"workbench.css","utf8");
 new vm.Script(visualizer,{filename:"gpu-visualizer.js"});
 new vm.Script(hlslHighlight,{filename:"hlsl-highlight.js"});
+new vm.Script(folds,{filename:"hlsl-fold-docs.js"});
+new vm.Script(docsData,{filename:"hlsl-docs-data.js"});
+new vm.Script(docsReference,{filename:"hlsl-reference.js"});
 new vm.Script(browserGpu,{filename:"browser-gpu.js"});
 const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)]
   .filter(m=>!m[0].includes("src="));
@@ -34,6 +41,25 @@ for(const id of ["wgsl-code","wgsl-input","wgsl-output","wgsl-run","wgsl-reset"]
 assert.ok(html.includes('src="browser-gpu.js"'));
 assert.ok(html.includes('src="gpu-visualizer.js"'));
 assert.ok(html.includes('src="hlsl-highlight.js"'),"HLSL syntax mirror script missing");
+for(const filename of ["hlsl-docs-data.js","hlsl-fold-docs.js"]){
+  assert.ok(html.includes('src="'+filename+'"'),"Missing local fold/documentation script: "+filename);
+  assert.ok(html.indexOf('src="'+filename+'"')<html.indexOf('src="live-runner.js"'),
+    "Fold help must initialize before the shader presets are loaded.");
+}
+assert.ok(html.indexOf('src="hlsl-docs-data.js"')<html.indexOf('src="hlsl-fold-docs.js"'),
+  "HLSL help data must load before hover/fold logic.");
+for(const id of ["code-sections","toggle-code-sections","fold-all","unfold-all",
+  "hlsl-help-tooltip","hlsl-help-title","hlsl-help-what","hlsl-help-does",
+  "hlsl-help-use","hlsl-help-example","hlsl-help-link"]){
+  assert.ok(html.includes('id="'+id+'"'),"Missing fold or hover control "+id);
+}
+assert.ok(docsPage.includes('src="hlsl-docs-data.js"'));
+assert.ok(docsPage.includes('id="reference-list"'));
+assert.ok(docsData.includes('"float4"')&&docsData.includes('"numthreads"')&&
+  docsData.includes('"RWStructuredBuffer"'));
+assert.ok(folds.includes("source.dispatchEvent(new Event("),
+  "Chunk edits must update canonical source and notify the compile runner.");
+
 assert.ok(html.includes('src="animation-runner.js"'),"Continuous GPU scheduler script missing");
 assert.ok(html.indexOf('src="live-runner.js"')<html.indexOf('src="animation-runner.js"'),
   "Base runner API must be initialized before continuous mode");
