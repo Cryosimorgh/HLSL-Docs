@@ -80,9 +80,11 @@ try {
     assert.equal(cors.status,403,"Origin policy must reject foreign pages");
     await cors.arrayBuffer();
     const one=await post("/api/session/open",{});
+    assert.equal(one.status,200);
+    const a=(await one.json()).token;
     const two=await post("/api/session/open",{});
-    assert.equal(one.status,200);assert.equal(two.status,200);
-    const a=(await one.json()).token,b=(await two.json()).token;
+    assert.equal(two.status,200);
+    const b=(await two.json()).token;
     assert.notEqual(a,b);
     let h=await(await fetch(base+"/api/health")).json();
     assert.equal(h.activeTabs,2);
