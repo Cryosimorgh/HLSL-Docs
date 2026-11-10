@@ -23,7 +23,7 @@ jobs:
       - name: Test editor and local HTTP API
         shell: pwsh
         run: |
-          # Verify complete offline docs and chunked WGSL HTTP response delivery.
+          # Verify the single CodeMirror gutter editor, offline docs and PowerShell compiler API.
           node playground/test-frontend.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Frontend test failed' }
           node playground/test-gpu-visualizer.mjs
