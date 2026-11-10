@@ -72,7 +72,7 @@ async function closePlayground() {
   // away so this page no longer owns a lease, without killing the browser.
   location.replace("about:blank");
 }
-window.addEventListener("pagehide", sendCloseBeacon);
+window.addEventListener("pagehide",()=>{window.HLSLAnimation?.stop();sendCloseBeacon();});
 window.addEventListener("visibilitychange", () => {
   if (!document.hidden && isBridgeOrigin && !leaseClosed && !leaseToken) void openLease();
 });
@@ -116,7 +116,7 @@ function parseManifest() {
     }
     if(r.visualize) {
       const v=r.visualize;
-      if(typeof v!=="object"||!["grid-mask","scatter-mask","scatter"].includes(v.mode)||
+      if(typeof v!=="object"||!["grid-mask","grid-fractal","scatter-mask","scatter"].includes(v.mode)||
          (v.channel!==undefined&&![0,1,2,3].includes(v.channel)))
         throw Error("Invalid visualization mode or channel.");
     }
@@ -304,6 +304,7 @@ async function run(){
   }
 }
 runButton.addEventListener("click",async()=>{
+  window.HLSLAnimation?.stop();
   runButton.disabled=true;
   const label=runButton.textContent;
   runButton.textContent="Running…";
@@ -325,10 +326,11 @@ editor.addEventListener("keydown",e=>{
   }
 });
 function setActivePreset(which){
-  for(const id of ["example-circle","example-scale","restore-example"])
+  for(const id of ["example-circle","example-julia","example-scale","restore-example"])
     $(id).setAttribute("aria-pressed",String(id===which));
 }
 $("restore-example").addEventListener("click",()=>{
+  window.HLSLAnimation?.stop();
   setActivePreset("restore-example");
   editor.dataset.dirty="";
   window.HLSLPlayground.restoreExample();
@@ -337,6 +339,7 @@ $("restore-example").addEventListener("click",()=>{
   setStatus("Restored particle HLSL shader and bindings.");
 });
 $("example-scale").addEventListener("click",()=>{
+  window.HLSLAnimation?.stop();
   setActivePreset("example-scale");
   editor.value=[
     "// Editable HLSL: this kernel doubles eight input floats.",
@@ -359,6 +362,7 @@ $("example-scale").addEventListener("click",()=>{
   setStatus("Loaded array-scaling example. Edit it and click Run on GPU.");
 });
 $("example-circle").addEventListener("click",()=>{
+  window.HLSLAnimation?.stop();
   setActivePreset("example-circle");
   const grid={width:32,height:32,xMax:1,yMax:1};
   editor.value=[
@@ -415,6 +419,11 @@ wgslDetails.addEventListener("toggle",()=>{
   wgslToggle.checked=wgslDetails.open;
   wgslArea.hidden=!wgslDetails.open;
 });
+window.HLSLRunnerAPI={
+  editor,manifestArea,runButton,results,wgslArea,
+  isBridgeOrigin,setStatus,setActivePreset,parseManifest,bytesFor,
+  gridConfig,compiledEntry,compiledSize,showBuffer
+};
 $("example-circle").click();
 if(!isBridgeOrigin)setStatus("Offline preview · launch Start-HLSL-Playground.cmd to run HLSL.");
 void openLease();
