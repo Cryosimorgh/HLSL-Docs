@@ -104,13 +104,7 @@
     const compileStart=now();
     const animation=validateAnimation(spec);
     if(!source||source.length>65536)throw Error("Invalid HLSL source length.");
-    const response=await fetch("/api/compile",{
-      method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({source,entry:spec.entry}),
-      signal:AbortSignal.timeout(35000)
-    });
-    const compiled=await response.json();
-    if(!response.ok)throw Error(compiled.error||"HLSL compilation failed.");
+    const compiled=await api.compileForWebGPU(source,spec.entry);
     const compileWallMs=now()-compileStart;
     const wgsl=compiled.wgsl;
     setStatus("DXC/Naga "+(compiled.cacheHit?"cache hit":"compiled")+
