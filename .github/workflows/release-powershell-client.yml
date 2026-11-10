@@ -1,4 +1,4 @@
-name: Release PowerShell HLSL client v1.7.0
+name: Release PowerShell HLSL client v1.8.0
 on:
   push:
     branches: [main]
@@ -26,6 +26,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'HLSL syntax highlight and editing test failed' }
           node playground/test-animation.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Continuous GPU animation lifecycle test failed' }
+          node playground/test-framebuffer.mjs
+          if ($LASTEXITCODE -ne 0) { throw 'Source-only RGBA framebuffer test failed' }
           node playground/test-powershell.mjs
           if ($LASTEXITCODE -ne 0) { throw 'Server test failed' }
       - name: Download upstream DXC and extract prebuilt Naga
@@ -62,23 +64,23 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $out=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5'
-          $app=Join-Path $out 'HLSL-Playground-Windows-v1.7.0'
+          $app=Join-Path $out 'HLSL-Playground-Windows-v1.8.0'
           $toolOnly=Join-Path $out 'compiler-only'
           foreach ($dir in @($app,(Join-Path $app 'playground'),(Join-Path $app 'tools\dxc'),(Join-Path $app 'tools\naga'),(Join-Path $toolOnly 'tools\dxc'),(Join-Path $toolOnly 'tools\naga'))) {
             New-Item -ItemType Directory -Path $dir -Force | Out-Null
           }
-          foreach ($name in @('index.html','workbench.css','hlsl-highlight.js','live-runner.js','animation-runner.js','browser-gpu.js','gpu-visualizer.js','julia-loop.hlsl','circle-mask.hlsl','particle-step.hlsl','server.ps1','README.md')) {
+          foreach ($name in @('index.html','workbench.css','hlsl-highlight.js','live-runner.js','animation-runner.js','browser-gpu.js','gpu-visualizer.js','julia-loop.hlsl','julia-rgba.hlsl','particles-rgba.hlsl','circle-mask.hlsl','particle-step.hlsl','server.ps1','README.md')) {
             Copy-Item -LiteralPath (Join-Path 'playground' $name) -Destination (Join-Path $app 'playground')
           }
           if (-not (Test-Path -LiteralPath (Join-Path $app 'playground\hlsl-highlight.js'))) {
             throw 'Full Windows ZIP must contain the HLSL syntax colorer'
           }
-          foreach ($asset in @('animation-runner.js','julia-loop.hlsl','gpu-visualizer.js')) {
+          foreach ($asset in @('animation-runner.js','julia-loop.hlsl','julia-rgba.hlsl','particles-rgba.hlsl','gpu-visualizer.js')) {
             if (-not (Test-Path -LiteralPath (Join-Path (Join-Path $app 'playground') $asset))) {
               throw "Full Windows ZIP is missing required animation asset: $asset"
             }
           }
-          foreach ($name in @('Start-HLSL-Playground.cmd','Start-HLSL-Playground.ps1','README-WINDOWS.txt','README.md','HLSL-Handbook.md','RELEASE_NOTES_v1.7.0.md','LICENSE','THIRD_PARTY_NOTICES.md')) {
+          foreach ($name in @('Start-HLSL-Playground.cmd','Start-HLSL-Playground.ps1','README-WINDOWS.txt','README.md','HLSL-Handbook.md','RELEASE_NOTES_v1.8.0.md','LICENSE','THIRD_PARTY_NOTICES.md')) {
             Copy-Item -LiteralPath $name -Destination $app
           }
           Copy-Item -LiteralPath 'docs' -Destination $app -Recurse
@@ -94,8 +96,8 @@ jobs:
           Copy-Item -LiteralPath (Join-Path $env:RUNNER_TEMP 'naga.exe') -Destination (Join-Path $toolOnly 'tools\naga\naga.exe')
           $actual=@(Get-ChildItem -LiteralPath $app -Recurse -File -Filter '*.exe' | Select-Object -ExpandProperty Name)
           if(@($actual | Where-Object { $_ -notin @('dxc.exe','naga.exe') }).Count -ne 0) { throw 'Unexpected executable! Custom server not allowed' }
-          $appZip=Join-Path $out 'HLSL-Playground-Windows-v1.7.0.zip'
-          $toolsZip=Join-Path $out 'HLSL-CompilerTools-v1.7.0.zip'
+          $appZip=Join-Path $out 'HLSL-Playground-Windows-v1.8.0.zip'
+          $toolsZip=Join-Path $out 'HLSL-CompilerTools-v1.8.0.zip'
           Compress-Archive -LiteralPath $app -DestinationPath $appZip -CompressionLevel Optimal
           Compress-Archive -LiteralPath (Join-Path $toolOnly 'tools') -DestinationPath $toolsZip -CompressionLevel Optimal
           @($appZip,$toolsZip) | ForEach-Object {
@@ -105,7 +107,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
-          $app=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5\HLSL-Playground-Windows-v1.7.0'
+          $app=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5\HLSL-Playground-Windows-v1.8.0'
           & (Join-Path $app 'Start-HLSL-Playground.ps1') -NoBrowser
           $ready=Get-ChildItem -LiteralPath $env:TEMP -Directory -Filter 'hlsl-playground-run-*' |
             Sort-Object LastWriteTime -Descending |
@@ -131,7 +133,7 @@ jobs:
           try {
             $visual=Invoke-WebRequest -Uri "$($info.url)/gpu-visualizer.js" -UseBasicParsing
             if($visual.StatusCode -ne 200) { throw 'Visual output script is missing from package server' }
-            foreach($sample in @('particle-step.hlsl','circle-mask.hlsl','julia-loop.hlsl')) {
+            foreach($sample in @('particle-step.hlsl','circle-mask.hlsl','julia-loop.hlsl','julia-rgba.hlsl','particles-rgba.hlsl')) {
               $src=Get-Content -LiteralPath (Join-Path 'playground' $sample) -Raw
               $body=@{entry='CSMain';source=$src} | ConvertTo-Json -Compress
               $result=Invoke-RestMethod -Uri "$($info.url)/api/compile" -Method POST -ContentType 'application/json' -Body $body
@@ -157,8 +159,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference='Stop'
-          gh release view v1.7.0 *> $null
-          if($LASTEXITCODE -eq 0) { throw 'v1.7.0 already exists' }
+          gh release view v1.8.0 *> $null
+          if($LASTEXITCODE -eq 0) { throw 'v1.8.0 already exists' }
           $out=Join-Path $env:RUNNER_TEMP 'hlsl-v1.5'
-          gh release create v1.7.0 (Join-Path $out 'HLSL-Playground-Windows-v1.7.0.zip') (Join-Path $out 'HLSL-CompilerTools-v1.7.0.zip') (Join-Path $out 'SHA256SUMS.txt') --target $env:GITHUB_SHA --title 'HLSL Workbench v1.7.0 — Continuous Julia GPU Animation' --notes-file RELEASE_NOTES_v1.7.0.md
+          gh release create v1.8.0 (Join-Path $out 'HLSL-Playground-Windows-v1.8.0.zip') (Join-Path $out 'HLSL-CompilerTools-v1.8.0.zip') (Join-Path $out 'SHA256SUMS.txt') --target $env:GITHUB_SHA --title 'HLSL Workbench v1.8.0 — Manifestless HLSL RGBA Animation' --notes-file RELEASE_NOTES_v1.8.0.md
           if($LASTEXITCODE -ne 0) { throw 'Release publish failed' }
