@@ -42,7 +42,13 @@
   };
   function validateAnimation(spec) {
     const a=spec.animation;
-    if(!a||typeof a!=="object")throw Error('Animation requires an "animation" manifest object.');
+    if(!a||typeof a!=="object")throw Error(
+      "This HLSL shader has no built-in animation output. For manifestless animation, declare "+
+      "RWStructuredBuffer<float4> Framebuffer : register(u0), "+
+      "cbuffer WorkbenchFrame : register(b7), and WORKBENCH_WIDTH/HEIGHT in the HLSL source. "+
+      "Select Julia animation or GPU particles for a working example. "+
+      "Use Compile & Run HLSL for a one-shot buffer shader."
+    );
     const binding=a.binding??32,component=a.component??0,
           speed=a.speed??1,fps=a.fps??30;
     if(!Number.isInteger(binding)||binding<0||binding>127||
