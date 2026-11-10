@@ -54,26 +54,69 @@ function axes(ctx,m,xMax,yMax){
   ctx.fillText("0",Math.max(4,m.left-38),m.top+8);
   ctx.fillText(fmt(yMax),Math.max(4,m.left-38),m.top+m.height);
 }
-function drawGrid(ctx, v, count, opts){
+function fractalRGB(v){
+  // Discrete palette derived from GPU escape-time intensity, not a CPU fractal.
+  const t=clamp(finite(v)?v:0,0,1);
+  const stops=[
+    [0.00,18,27,43],[0.06,38,53,95],[0.18,37,104,146],
+    [0.36,84,160,166],[0.62,228,178,110],[1.00,246,232,198]
+  ];
+  let a=stops[0],b=stops[stops.length-1];
+  for(let i=1;i<stops.length;i++)if(t<=stops[i][0]){a=stops[i-1];b=stops[i];break;}
+  const p=clamp((t-a[0])/(b[0]-a[0]||1),0,1);
+  return [Math.round(a[1]+(b[1]-a[1])*p),
+          Math.round(a[2]+(b[2]-a[2])*p),
+          Math.round(a[3]+(b[3]-a[3])*p)];
+}
+function drawGrid(ctx, v, count, opts,fractal=false){
   const grid=opts.grid||{};
-  const gw=grid.width, gh=grid.height;
+  const gw=grid.width,gh=grid.height;
   if(!Number.isInteger(gw)||!Number.isInteger(gh)||gw*gh!==count||gw<2||gh<2)
-    throw Error("Grid visualization requires grid.width × grid.height to match GPU output sample count.");
+    throw Error("Grid visualization requires width × height to match GPU output sample count.");
   const channel=opts.channel??2;
   const xMax=grid.xMax??1,yMax=grid.yMax??1;
-  const m=setup(ctx,"GPU circle mask · 2D grid",xMax/yMax);
-  const values=[];
+  const m=setup(ctx,fractal?"Julia set":"GPU mask",xMax/yMax);
+  const values=new Float32Array(count);
+  // Fast path: plot 16,384 pixels with ONE drawImage, rather than thousands
+  // of fillRect and CSS string allocations every animation frame.
+  let bitmap=null,image=null,pixelContext=null;
+  if(typeof document.createElement==="function"&&typeof ctx.drawImage==="function"){
+    bitmap=document.createElement("canvas");
+    bitmap.width=gw;bitmap.height=gh;
+    pixelContext=bitmap.getContext("2d");
+    if(pixelContext?.createImageData)image=pixelContext.createImageData(gw,gh);
+  }
   for(let i=0;i<count;i++){
     const z=v[i*4+channel];
-    values.push(z);
-    ctx.fillStyle=palette(z);
-    const x=m.left+(i%gw)*m.width/gw,
-          y=m.top+Math.floor(i/gw)*m.height/gh;
-    ctx.fillRect(x,y,Math.ceil(m.width/gw)+0.25,Math.ceil(m.height/gh)+0.25);
+    values[i]=z;
+    const rgb=fractal?fractalRGB(z):null;
+    if(image){
+      const p=i*4;
+      if(fractal){
+        image.data[p]=rgb[0];image.data[p+1]=rgb[1];image.data[p+2]=rgb[2];
+      }else{
+        const t=clamp(finite(z)?z:0,0,1);
+        image.data[p]=Math.round(29+205*t);
+        image.data[p+1]=Math.round(39+147*t);
+        image.data[p+2]=Math.round(50+69*t);
+      }
+      image.data[p+3]=255;
+    }else{
+      ctx.fillStyle=fractal?"rgb("+rgb.join(",")+")":palette(z);
+      const x=m.left+(i%gw)*m.width/gw,y=m.top+Math.floor(i/gw)*m.height/gh;
+      ctx.fillRect(x,y,Math.ceil(m.width/gw)+0.25,Math.ceil(m.height/gh)+0.25);
+    }
+  }
+  if(image){
+    pixelContext.putImageData(image,0,0);
+    const oldSmooth=ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(bitmap,m.left,m.top,m.width,m.height);
+    ctx.imageSmoothingEnabled=oldSmooth;
   }
   axes(ctx,m,xMax,yMax);
-  const st=stats(values);
-  return {st,kind:"mask",description:gw+"×"+gh+" GPU samples, displayed as image cells"};
+  return {st:stats(values),kind:fractal?"fractal":"mask",
+    description:gw+"×"+gh+" GPU readback samples; "+(fractal?"escape iterations":"mask")};
 }
 function drawScatter(ctx,v,count,opts,maskMode,defaultXMax){
   const channel=opts.channel??2;
@@ -130,9 +173,9 @@ function render({bytes,format,binding,visualize,source,worldWidth}) {
     if(bytes.byteLength%16)throw Error("float4 visualization requires 16-byte-aligned output.");
     const v=new Float32Array(bytes),count=v.length/4;
     mode=opts.mode||(hasMaskSource(source)?"scatter-mask":"scatter");
-    if(!["grid-mask","scatter-mask","scatter"].includes(mode))throw Error("Unknown float4 visualization mode: "+mode);
-    result=mode==="grid-mask"
-      ?drawGrid(ctx,v,count,opts)
+    if(!["grid-mask","grid-fractal","scatter-mask","scatter"].includes(mode))throw Error("Unknown float4 visualization mode: "+mode);
+    result=mode==="grid-mask"||mode==="grid-fractal"
+      ?drawGrid(ctx,v,count,opts,mode==="grid-fractal")
       :drawScatter(ctx,v,count,opts,mode==="scatter-mask",worldWidth||1);
   }else{
     const dv=new DataView(bytes),v=[];
@@ -143,11 +186,16 @@ function render({bytes,format,binding,visualize,source,worldWidth}) {
   const {st,kind,description}=result;
   const set=(id,value)=>{const node=$(id);if(node)node.textContent=value;};
   set("viz-samples",st.n.toLocaleString("en-US"));
-  set("viz-coverage",kind==="mask"&&st.valid?(100*st.positive/st.valid).toFixed(1)+"%":"—");
+  set("viz-coverage",(kind==="mask"||kind==="fractal")&&st.valid?(100*st.positive/st.valid).toFixed(1)+"%":"—");
+  const coverageLabel=$("viz-coverage-label");
+  if(coverageLabel)coverageLabel.textContent=kind==="fractal"?"High iteration":"Coverage";
   set("viz-range",fmt(st.min)+" – "+fmt(st.max));
   set("viz-mean",fmt(st.mean));
   summary.classList?.remove("warning");
-  if(kind==="mask") {
+  if(kind==="fractal"){
+    title.textContent="Julia fractal · binding "+binding;
+    summary.textContent="Live GPU escape-time image · "+st.n+" samples";
+  }else if(kind==="mask") {
     title.textContent="Circle mask · binding "+binding;
     summary.textContent=st.positive+"/"+st.valid+" samples have mask ≥ 0.5";
     if(st.valid>0&&st.positive===0) {
@@ -161,7 +209,8 @@ function render({bytes,format,binding,visualize,source,worldWidth}) {
     summary.textContent+=" · "+(st.n-st.valid)+" non-finite values";
     summary.classList?.add("warning");
   }
-  legend.textContent=kind==="mask"?
+  legend.textContent=kind==="fractal"?"Deep blue → teal → amber = increasing escape iteration count":
+    kind==="mask"?
     "0 — outside · 1 — inside · Amber — positive mask":
     kind==="channel"?"XY position · color represents channel "+(opts.channel??2):
     "Above baseline: amber · Below baseline: red";
