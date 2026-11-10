@@ -9,6 +9,7 @@ on:
       - 'playground/animation-runner.js'
       - 'playground/gpu-visualizer.js'
       - 'playground/hlsl-fold-docs.js'
+      - 'playground/install-editor-vendor.mjs'
       - 'playground/hlsl-docs-data.js'
       - 'playground/hlsl-reference.html'
       - 'playground/hlsl-reference.js'
@@ -29,5 +30,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install pinned CodeMirror editor used by the Windows release
+        run: node playground/install-editor-vendor.mjs
       - name: Load real HTML and deferred scripts in headless Chromium
         run: node playground/test-browser-bootstrap.mjs
