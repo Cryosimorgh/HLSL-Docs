@@ -1,116 +1,119 @@
-// Dependency-free code folding and contextual HLSL help.
-// Canonical compiled text stays in #code. Folding is a view over that source.
-// User edits in section textareas update the same canonical source byte-for-byte.
-// Docs and example snippets are text nodes; shader input never becomes HTML.
+// VS Code-style, in-editor HLSL folding with an offline CodeMirror 5 editor.
+// No secondary cards or per-chunk textareas. Collapsing is a view operation:
+// the same full #code source always feeds DXC, export, and animation.
+// CodeMirror 5.65.21 and addons are shipped locally (MIT).
 (() => {
   "use strict";
   const $=id=>document.getElementById(id);
-  const source=$("code"), frame=document.querySelector(".editor-frame"),
-    view=$("code-sections"), toggle=$("toggle-code-sections"),
-    foldAll=$("fold-all"), unfoldAll=$("unfold-all"), tooltip=$("hlsl-help-tooltip");
-  const docs=window.HLSLDocs;
-  if(!source||!frame||!view||!toggle||!tooltip||!docs)return;
-  let sections=[],inSectionEdit=false,folding=false,activeKey="";
+  const source=$("code"),frame=document.querySelector(".editor-frame");
+  const foldAllButton=$("fold-all"),unfoldAllButton=$("unfold-all");
+  const tooltip=$("hlsl-help-tooltip"),docs=window.HLSLDocs;
+  const CM=window.CodeMirror;
+  if(!source||!frame||!docs||!tooltip)return;
+  if(!CM||typeof CM.fromTextArea!=="function"||typeof CM.prototype?.foldCode!=="function"){
+    // Source checkout without vendored editor: leave the native textarea usable
+    // rather than displaying inert folding controls or hiding the shader.
+    if(foldAllButton)foldAllButton.hidden=true;
+    if(unfoldAllButton)unfoldAllButton.hidden=true;
+    console.warn("Offline CodeMirror assets unavailable; native HLSL editor remains editable.");
+    return;
+  }
   const help={
     title:$("hlsl-help-title"),what:$("hlsl-help-what"),
     does:$("hlsl-help-does"),use:$("hlsl-help-use"),
     example:$("hlsl-help-example"),link:$("hlsl-help-link")
   };
+  const types=/^(?:void|bool|int|uint|half|float|double|min16float|min16int|min16uint)(?:[1-4](?:x[1-4])?)?$/;
+  const resources=/^(?:(?:RW)?StructuredBuffer|(?:RW)?ByteAddressBuffer|ConstantBuffer|(?:RW)?Texture\w*|Sampler\w*)$/;
+  CM.defineMode("hlsl",cfg=>{
+    const cpp=CM.getMode(cfg,"text/x-c++src");
+    return {
+      startState:()=>CM.startState(cpp),
+      copyState:state=>CM.copyState(cpp,state),
+      token(stream,state){
+        const cls=cpp.token(stream,state),token=stream.current();
+        if(cls==="comment"||cls==="string")return cls;
+        if(resources.test(token))return "variable-2";
+        if(types.test(token))return "type";
+        if(/^SV_\w+$/.test(token))return "atom";
+        if(/^#[a-z]/i.test(token))return "meta";
+        if(docs.get(token)&&!/^\s/.test(token))return "builtin";
+        return cls;
+      },
+      indent:cpp.indent?.bind(cpp),
+      electricChars:cpp.electricChars
+    };
+  });
 
-  // Count braces outside strings/comments. Folding never changes shader text.
-  function cleanLine(line,state){
-    let cleaned="",quote=null;
-    for(let j=0;j<line.length;j++){
-      const c=line[j],n=line[j+1];
-      if(state.block){
-        if(c==="*"&&n==="/"){state.block=false;cleaned+="  ";j++;}
-        else cleaned+=" ";
-      }else if(quote){
-        if(c==="\\"){cleaned+="  ";j++;}
-        else if(c===quote){quote=null;cleaned+=" ";}
-        else cleaned+=" ";
-      }else if(c==="/"&&n==="*"){
-        state.block=true;cleaned+="  ";j++;
-      }else if(c==="/"&&n==="/"){
-        cleaned+= " ".repeat(line.length-j);break;
-      }else if(c==='"'||c==="'"){quote=c;cleaned+=" ";}
-      else cleaned+=c;
+  // Fold on a function/control/declaration line, even when the opening brace
+  // is placed on its next line. Never fold an arbitrary #define or a single
+  // line and never rewrite the source while folding.
+  const header=/^\s*(?:(?:cbuffer|tbuffer|struct|namespace|class)\b|(?:(?:(?:static|inline|const|precise)\s+)*(?:void|float\d?(?:x\d)?|half\d?|uint\d?|int\d?|bool\d?|double\d?)\s+[A-Za-z_]\w*\s*\()|(?:if|for|while|else|switch|do)\s*(?:\(|\{|\b)|\{)/;
+  function strippedLines(cm){
+    const lines=[],state={block:false};
+    for(let i=0;i<cm.lineCount();i++){
+      const raw=cm.getLine(i),characters=raw.split("");
+      let quote="",single=false;
+      for(let j=0;j<characters.length;j++){
+        const c=characters[j],n=characters[j+1];
+        if(state.block){
+          characters[j]=" ";
+          if(c==="*"&&n==="/"){characters[++j]=" ";state.block=false;}
+        }else if(quote){
+          characters[j]=" ";
+          if(c==="\\"){if(j+1<characters.length)characters[++j]=" ";}
+          else if(c===quote)quote="";
+        }else if(c==="/"&&n==="*"){
+          characters[j]=" ";
+          if(j+1<characters.length)characters[++j]=" ";
+          state.block=true;
+        }else if(c==="/"&&n==="/"){
+          characters.fill(" ",j);break;
+        }else if(c==='"'||c==="'"){quote=c;characters[j]=" ";}
+      }
+      lines.push(characters.join(""));
     }
-    return cleaned;
+    return lines;
   }
-  function beginsChunk(line){
-    const s=line.trim();
-    return /^#\s*(?:define|include|if|elif|else|endif|pragma|undef)\b/.test(s)
-      || /^(?:cbuffer|tbuffer|struct|typedef)\b/.test(s)
-      || /^(?:(?:RW)?StructuredBuffer|(?:RW)?ByteAddressBuffer|ConstantBuffer|(?:RW)?Texture\w*|Sampler\w*)\b/.test(s)
-      || /^\[\s*(?:numthreads|loop|unroll|branch|flatten)\b/.test(s)
-      || /^(?:(?:static|inline|const|precise)\s+)*(?:void|float\d?(?:x\d)?|half\d?|uint\d?|int\d?|bool\d?|double\d?)\s+[A-Za-z_]\w*\s*\(/.test(s);
-  }
-  function labelFor(block,index){
-    const lines=block.split(/\r?\n/);
-    const useful=lines.map(l=>l.trim()).filter(l=>l&&!l.startsWith("//")&&!l.startsWith("/*")&&!l.startsWith("*"));
-    const first=useful[0]||"Comments / declarations";
-    if(/^\[\s*numthreads/.test(first)){
-      const fn=useful.find(l=>/\b(?:void|float\d?|uint|int)\s+\w+\s*\(/.test(l));
-      return fn?fn.replace(/\s*\{.*/,"").slice(0,92):"Compute entry point";
+  let scanCache={gen:-1,lines:[]};
+  function getScan(cm){
+    const gen=cm.changeGeneration();
+    if(scanCache.gen!==gen){
+      scanCache={gen,lines:strippedLines(cm)};
     }
-    return first.replace(/\s*\{.*/,"").replace(/;\s*$/,"").slice(0,92);
+    return scanCache.lines;
   }
-  function splitSource(text){
-    const lines=text.match(/[^\n]*\n|[^\n]+$/g)||[""];
-    const starts=[0];let depth=0;
-    const st={block:false};
-    for(let i=0;i<lines.length;i++){
-      const raw=lines[i];
-      const cleaned=cleanLine(raw,st);
-      if(i>0&&depth===0&&beginsChunk(cleaned)&&i!==starts[starts.length-1])
-        starts.push(i);
-      for(const c of cleaned){
-        if(c==="{")depth++;
-        else if(c==="}")depth=Math.max(0,depth-1);
+  function rangeFinder(cm,start){
+    const raw=cm.getLine(start.line)||"";
+    const clean=getScan(cm);
+    const headerLine=clean[start.line]||"";
+    if(!header.test(headerLine))return null;
+    let openLine=-1,openCol=-1;
+    for(let n=start.line;n<Math.min(start.line+3,cm.lineCount());n++){
+      const value=clean[n]||"";
+      const pos=value.indexOf("{");
+      if(pos>=0){openLine=n;openCol=pos;break;}
+      if(n>start.line&&value.trim()!==""&&value.trim()!=="{")break;
+    }
+    if(openLine<0)return null;
+    let depth=0;
+    for(let n=openLine;n<cm.lineCount();n++){
+      const value=clean[n];
+      for(let p=n===openLine?openCol:0;p<value.length;p++){
+        const char=value[p];
+        if(char==="{")depth++;
+        else if(char==="}"&&--depth===0){
+          if(n<=start.line)return null;
+          return {from:CM.Pos(start.line,raw.length),to:CM.Pos(n,p+1)};
+        }
       }
     }
-    const result=[];
-    for(let j=0;j<starts.length;j++){
-      const first=starts[j],last=(starts[j+1]??lines.length);
-      const snippet=lines.slice(first,last).join("");
-      result.push({label:labelFor(snippet,j),line:first+1,lines:last-first,text:snippet});
-    }
-    return result;
-  }
-  const TOKEN=/(?:\/\*[\s\S]*?\*\/|\/\/[^\r\n]*|^[ \t]*#[^\r\n]*|"(?:\\.|[^"\\])*"?|'(?:\\.|[^'\\])*'?|\b(?:0[xX][\da-fA-F]+|[0-9]+(?:\.[0-9]*)?(?:[eE][-+]?\d+)?[fFuU]?)\b|[A-Za-z_]\w*|[^\w])/gm;
-  const keyword=/^(?:if|else|for|while|return|struct|cbuffer|const|static|break|continue|true|false)$/;
-  const type=/^(?:float|float[2-4]|float[2-4]x[2-4]|half|int|int[2-4]|uint|uint[2-4]|bool|void)$/;
-  const resource=/^(?:RWStructuredBuffer|StructuredBuffer|RWByteAddressBuffer|ByteAddressBuffer|ConstantBuffer)$/;
-  function decorateCode(pre,text){
-    pre.replaceChildren();
-    let last=0,m;
-    TOKEN.lastIndex=0;
-    while((m=TOKEN.exec(text))){
-      if(m.index>last)pre.append(document.createTextNode(text.slice(last,m.index)));
-      const raw=m[0],item=docs.get(raw);
-      let klass="";
-      if(/^\/\/|^\/\*/.test(raw))klass="tok-comment";
-      else if(/^\s*#/.test(raw))klass="tok-preprocessor";
-      else if(/^["']/.test(raw))klass="tok-string";
-      else if(/^(?:\d|\.\d)/.test(raw))klass="tok-number";
-      else if(keyword.test(raw))klass="tok-keyword";
-      else if(type.test(raw))klass="tok-type";
-      else if(resource.test(raw))klass="tok-resource";
-      else if(/^SV_/.test(raw))klass="tok-semantic";
-      else if(item)klass="tok-builtin";
-      if(klass||item){
-        const span=document.createElement("span");
-        span.className=klass+(item?" doc-term":"");
-        if(item){span.dataset.hlslDoc=item.key;span.tabIndex=0;}
-        span.textContent=raw;pre.append(span);
-      }else pre.append(document.createTextNode(raw));
-      last=m.index+raw.length;
-    }
-    if(last<text.length)pre.append(document.createTextNode(text.slice(last)));
+    return null;
   }
 
-  function show(item,x,y){
+  let activeKey="",cm;
+  function hide(){tooltip.hidden=true;activeKey="";}
+  function show(item,clientX,clientY){
     if(!item)return hide();
     if(activeKey!==item.key){
       activeKey=item.key;
@@ -122,174 +125,119 @@
       help.link.href="hlsl-reference.html#"+encodeURIComponent(item.key);
     }
     tooltip.hidden=false;
-    const width=tooltip.offsetWidth||330,height=tooltip.offsetHeight||230;
-    const left=Math.max(8,Math.min(x+15,window.innerWidth-width-9));
-    let top=y+18;
-    if(top+height>window.innerHeight-8)top=y-height-12;
-    tooltip.style.left=Math.round(left)+"px";
-    tooltip.style.top=Math.max(8,Math.round(top))+"px";
+    const w=tooltip.offsetWidth||340,h=tooltip.offsetHeight||240;
+    const left=Math.max(8,Math.min(clientX+14,window.innerWidth-w-8));
+    const top=clientY+h+18>window.innerHeight?
+      Math.max(8,clientY-h-14):clientY+18;
+    tooltip.style.left=left+"px";tooltip.style.top=top+"px";
   }
-  function hide(){
-    tooltip.hidden=true;
-    activeKey="";
-  }
-
-  // Approximate monospace hit testing over the transparent native textarea.
-  // It leaves selection, composition, input handling and IME entirely native.
-  let charWidth=8,lineHeight=23;
-  function measure(){
-    const css=getComputedStyle(source),canvas=document.createElement("canvas");
-    const ctx=canvas.getContext("2d");
-    if(ctx){ctx.font=css.font;charWidth=ctx.measureText("M").width||8;}
-    lineHeight=parseFloat(css.lineHeight)||23;
-  }
-  function hoveredWord(e){
-    const rect=source.getBoundingClientRect();
-    const css=getComputedStyle(source);
-    const x=e.clientX-rect.left+source.scrollLeft-parseFloat(css.paddingLeft||"0");
-    const y=e.clientY-rect.top+source.scrollTop-parseFloat(css.paddingTop||"0");
-    if(x<0||y<0)return null;
-    const lines=source.value.split("\n");
-    const row=Math.floor(y/lineHeight);
-    if(row<0||row>=lines.length)return null;
-    const line=lines[row],col=Math.floor(x/charWidth);
-    if(col<0||col>=line.length)return null;
-    const comment=line.indexOf("//");
-    if(comment>=0&&col>=comment)return null;
-    const pattern=/[A-Za-z_]\w*/g;let m;
-    while((m=pattern.exec(line))){
-      if(col>=m.index&&col<m.index+m[0].length)return docs.get(m[0]);
+  function wordAt(cm,pos){
+    const line=cm.getLine(pos.line);
+    if(!line)return null;
+    let word;
+    for(const match of line.matchAll(/[A-Za-z_]\w*/g)){
+      if(match.index<=pos.ch&&pos.ch<match.index+match[0].length){
+        word=match[0];break;
+      }
     }
-    return null;
+    // Prevent misleading docs when the token belongs to a comment or string.
+    if(!word)return null;
+    const style=cm.getTokenTypeAt({line:pos.line,ch:pos.ch+1})||"";
+    if(/\b(?:comment|string)\b/.test(style))return null;
+    return docs.get(word);
   }
-  source.addEventListener("mousemove",e=>{
-    const item=hoveredWord(e);
-    if(item)show(item,e.clientX,e.clientY);else hide();
-  });
-  source.addEventListener("mouseleave",e=>{
-    if(!tooltip.contains(e.relatedTarget))hide();
-  });
-  source.addEventListener("keydown",e=>{
-    if(e.key!=="F1"){hide();return;}
-    const i=source.selectionStart,txt=source.value;
-    let a=i,b=i;
-    while(a>0&&/\w/.test(txt[a-1]))a--;
-    while(b<txt.length&&/\w/.test(txt[b]))b++;
-    const item=docs.get(txt.slice(a,b));
-    if(item){e.preventDefault();const rect=source.getBoundingClientRect();
-      show(item,rect.left+Math.min(rect.width/2,200),rect.top+75);}
-  });
-  source.addEventListener("scroll",hide,{passive:true});
-  view.addEventListener("mouseover",e=>{
-    const term=e.target.closest?.("[data-hlsl-doc]");
-    if(term){const item=docs.get(term.dataset.hlslDoc);
-      show(item,e.clientX,e.clientY);}
-  });
-  view.addEventListener("mouseout",e=>{
-    if(!e.relatedTarget?.closest?.("[data-hlsl-doc]")&&
-       !tooltip.contains(e.relatedTarget))hide();
-  });
-  view.addEventListener("focusin",e=>{
-    const term=e.target.closest?.("[data-hlsl-doc]");
-    if(term){const rect=term.getBoundingClientRect();
-      show(docs.get(term.dataset.hlslDoc),rect.left,rect.bottom);}
-  });
-  view.addEventListener("focusout",e=>{
-    if(!tooltip.contains(e.relatedTarget))hide();
-  });
-  tooltip.addEventListener("mouseleave",hide);
-  document.addEventListener("keydown",e=>{if(e.key==="Escape")hide();});
-  window.addEventListener("blur",hide);
-
-  function renderSections(){
-    const prior=new Map(sections.map(s=>[s.label,s.node?.open]));
-    sections=splitSource(source.value);
-    const frag=document.createDocumentFragment();
-    let index=0;
-    for(const block of sections){
-      const details=document.createElement("details");
-      details.className="code-section";
-      details.open=prior.has(block.label)?prior.get(block.label):
-        (/CSMain\s*\(|FractalColor\s*\(/.test(block.label));
-      const summary=document.createElement("summary");
-      const name=document.createElement("span");name.className="section-name";
-      name.textContent=block.label;
-      const lines=document.createElement("span");
-      lines.className="section-lines";
-      lines.textContent="Line "+block.line+" · "+block.lines+" lines";
-      summary.append(name,lines);
-      const body=document.createElement("div");
-      body.className="section-body";
-      const pre=document.createElement("pre");
-      pre.className="section-code";
-      decorateCode(pre,block.text);
-      const editButton=document.createElement("button");
-      editButton.type="button";editButton.className="minor-button section-edit-button";
-      editButton.textContent="Edit section";
-      const chunkEditor=document.createElement("textarea");
-      chunkEditor.className="section-editor";
-      chunkEditor.spellcheck=false;chunkEditor.autocapitalize="off";
-      chunkEditor.value=block.text;
-      chunkEditor.hidden=true;
-      chunkEditor.setAttribute("aria-label","Edit "+block.label);
-      chunkEditor.rows=Math.min(24,Math.max(4,block.lines+1));
-      editButton.addEventListener("click",()=>{
-        chunkEditor.hidden=!chunkEditor.hidden;
-        pre.hidden=!chunkEditor.hidden;
-        editButton.textContent=chunkEditor.hidden?"Edit section":"Show highlighted view";
-        if(!chunkEditor.hidden)chunkEditor.focus();
-        else decorateCode(pre,block.text);
-      });
-      chunkEditor.addEventListener("input",()=>{
-        block.text=chunkEditor.value;
-        inSectionEdit=true;
-        source.value=sections.map(s=>s.text).join("");
-        source.dataset.dirty="1";
-        source.dispatchEvent(new Event("input",{bubbles:true}));
-        inSectionEdit=false;
-      });
-      body.append(editButton,pre,chunkEditor);
-      details.append(summary,body);
-      block.node=details;
-      frag.append(details);
-      index++;
+  function showAtCursor(editor){
+    const pos=editor.getCursor(),item=wordAt(editor,pos);
+    if(!item)return;
+    const coords=editor.charCoords(pos,"window");
+    show(item,coords.left,coords.bottom);
+  }
+  cm=CM.fromTextArea(source,{
+    mode:"hlsl",lineNumbers:true,lineWrapping:false,
+    tabSize:4,indentUnit:4,indentWithTabs:false,
+    styleActiveLine:false,
+    gutters:["CodeMirror-foldgutter","CodeMirror-linenumbers"],
+    foldGutter:true,
+    foldOptions:{rangeFinder,widget:"…"},
+    viewportMargin:10,
+    extraKeys:{
+      "Ctrl-Enter":()=>{ $("run-gpu")?.click(); },
+      "Cmd-Enter":()=>{ $("run-gpu")?.click(); },
+      "F1":editor=>showAtCursor(editor),
+      "Ctrl-Alt-[":editor=>editor.foldCode(editor.getCursor(),null,"fold"),
+      "Ctrl-Alt-]":editor=>editor.foldCode(editor.getCursor(),null,"unfold")
     }
-    view.replaceChildren(frag);
-  }
+  });
+  frame.classList.add("has-codemirror");
+  const originalMirror=$("code-highlight");
+  if(originalMirror)originalMirror.hidden=true;
+  cm.setSize("100%","100%");
+
+  // Keep the existing #code as the single canonical HLSL source.
+  // CodeMirror edits are copied back immediately (not just at form submit).
+  let syncing=false;
+  cm.on("change",editor=>{
+    if(syncing)return;
+    const value=editor.getValue();
+    if(source.value===value)return;
+    source.value=value;
+    source.dataset.dirty="1";
+    source.dispatchEvent(new Event("input",{bubbles:true}));
+  });
   function refresh(){
-    if(inSectionEdit)return;
-    if(folding)renderSections();
+    if(cm.getValue()===source.value)return;
+    syncing=true;
+    const selection=cm.getCursor();
+    cm.setValue(source.value);
+    cm.setCursor(Math.min(selection.line,cm.lastLine()),selection.ch);
+    syncing=false;
   }
-  function toggleView(force){
-    folding=typeof force==="boolean"?force:!folding;
-    frame.hidden=folding;
-    view.hidden=!folding;
-    toggle.setAttribute("aria-pressed",String(folding));
-    toggle.textContent=folding?"Full editor":"Code sections";
-    foldAll.hidden=!folding;
-    unfoldAll.hidden=!folding;
-    hide();
-    if(folding){renderSections();view.scrollTop=0;}
+  const highlighter=window.HLSLHighlight;
+  if(highlighter){
+    const original=highlighter.refresh;
+    highlighter.refresh=function(...args){
+      const outcome=original?.(...args);
+      refresh();
+      return outcome;
+    };
   }
-  toggle.addEventListener("click",()=>toggleView());
-  foldAll.addEventListener("click",()=>{
-    for(const block of sections)block.node.open=false;
-  });
-  unfoldAll.addEventListener("click",()=>{
-    for(const block of sections)block.node.open=true;
-  });
-  // Preset source writes call HLSLHighlight.refresh(). Hook it without
-  // changing compilation or the existing editable source buffer.
-  const original=window.HLSLHighlight?.refresh;
-  if(original)window.HLSLHighlight.refresh=function(...args){
-    const result=original(...args);
-    refresh();
-    return result;
-  };
   source.addEventListener("input",refresh);
-  measure();
-  window.addEventListener("resize",measure);
-  window.HLSLFoldDocs={splitSource,refresh,toggleView,get sections(){return sections;}};
-  // Directly visible foldable chunks, not a simulated editor screenshot.
-  toggleView(true);
+  function foldAll(){
+    cm.operation(()=>{
+      for(let line=cm.lastLine();line>=0;line--){
+        if(rangeFinder(cm,CM.Pos(line,0))){
+          cm.foldCode(CM.Pos(line,0),{rangeFinder,widget:"…"},"fold");
+        }
+      }
+    });
+    cm.focus();
+  }
+  function unfoldAll(){
+    cm.operation(()=>{
+      for(const mark of cm.getAllMarks()){
+        if(mark.__isFold)mark.clear();
+      }
+    });
+    cm.focus();
+  }
+  foldAllButton?.addEventListener("click",foldAll);
+  unfoldAllButton?.addEventListener("click",unfoldAll);
+  cm.getWrapperElement().addEventListener("mousemove",event=>{
+    const pos=cm.coordsChar({left:event.clientX,top:event.clientY},"window");
+    show(wordAt(cm,pos),event.clientX,event.clientY);
+  });
+  cm.getWrapperElement().addEventListener("mouseleave",event=>{
+    if(!tooltip.contains(event.relatedTarget))hide();
+  });
+  cm.on("scroll",hide);
+  cm.on("cursorActivity",hide);
+  tooltip.addEventListener("mouseleave",hide);
+  document.addEventListener("keydown",event=>{if(event.key==="Escape")hide();});
+  window.addEventListener("blur",hide);
+  window.HLSLFoldDocs={
+    editor:cm,refresh,foldAll,unfoldAll,
+    showHelp:key=>{const item=docs.get(key);if(item)show(item,160,100);return !!item;},
+    getFoldRange:line=>rangeFinder(cm,CM.Pos(line,0))
+  };
+  refresh();
 })();
