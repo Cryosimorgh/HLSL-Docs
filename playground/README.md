@@ -1,10 +1,10 @@
 # Interactive HLSL Compute Playground
 
-**[Download the Windows v1.6.0 client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.6.0.zip)** · [Handbook](../README.md) · [Compute shader source](particle-step.hlsl)
+**[Download the Windows v1.6.1 client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.6.1.zip)** · [Handbook](../README.md) · [Compute shader source](particle-step.hlsl)
 
 ## Run real HLSL on Windows
 
-1. Extract the **entire** Windows v1.6.0 ZIP into a new folder.
+1. Extract the **entire** Windows v1.6.1 ZIP into a new folder.
 2. Double-click **Start-HLSL-Playground.cmd** at the root of that folder.
 3. The launcher starts a loopback-only **PowerShell/.NET** compiler bridge and opens your browser to `http://127.0.0.1:<port>/`. Use this new tab, not a `file://` tab. The **Circle mask** preset is loaded automatically.
 4. Click **Compile & Run HLSL** or press **Ctrl+Enter** in the editor. The 2D GPU mask is shown directly alongside the code. Select **Array transform** to try scalar output.
@@ -46,6 +46,10 @@ The input `t0` uses `{"binding":0,"access":"read","preset":"grid","grid":{"width
 **Why an earlier circle shader looked blank:** its `radius` came from the physics ball radius at cbuffer byte 20, not a configurable circle radius. With particles resting near `y=0.986` and the circle centered at `y=0.5`, every computed mask was zero. Moreover, applying `float4(x,y,mask,0)` back into the physics simulation treated the mask as x-velocity. The client now keeps mask results separate and reports zero coverage explicitly.
 
 The mask example uses an explicit `EdgeWidth` instead of `fwidth()` because the current Naga translator doesn't accept the `SPV_KHR_compute_shader_derivatives` extension. It also uses scalar float padding in its b0 cbuffer to avoid WGSL uniform alignment incompatibilities with `float3`.
+
+## Editor highlighting and preview controls
+
+The HLSL editor colors known types, keywords, comments, numbers, functions, resources, registers and variable identifiers without requiring IntelliSense or any editor download. The editable source remains a native textarea; the syntax layer is only visual. The GPU plot uses a larger area with less empty padding while preserving correct X/Y geometry. Collapsed sections use chevrons, not add/remove icons.
 
 ## What happens when you click Run
 
@@ -95,4 +99,4 @@ Opening `playground/index.html` directly without the launcher provides the JavaS
 
 The repository's Windows CI runs `node playground/test-powershell.mjs` **only as a test client**, including real DXC/Naga compilation through the PowerShell HTTP API. Users do not need Node.
 
-[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.6.0.md)
+[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.6.1.md)
