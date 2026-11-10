@@ -3,104 +3,188 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Interactive HLSL compute shader tutorial: explore GPU workgroups, SV_DispatchThreadID, gravity, restitution, timestep and DXC-compilable HLSL examples. Works offline.">
-<title>HLSL Compute Playground — Interactive GPU Programming Tutorial</title>
-<style>
-:root{color-scheme:dark;font:16px/1.55 system-ui,-apple-system,Segoe UI,sans-serif;background:#0b1120;color:#ebf4ff}
-*{box-sizing:border-box}body{margin:0}.wrap{max-width:1390px;margin:0 auto;padding:24px}
-a{color:#84d6ff}header{margin-bottom:18px}h1{font-size:clamp(1.65rem,4vw,2.7rem);line-height:1.17;margin:6px 0 8px}h2{font-size:1.1rem;margin:0 0 12px}h3{font-size:.98rem;margin:0 0 8px}.eyebrow{color:#7dd3fc;text-transform:uppercase;letter-spacing:.1em;font-size:.73rem;font-weight:700}p{margin:7px 0 13px}.muted{color:#aac0d7;font-size:.9rem}.layout{display:grid;grid-template-columns:minmax(255px,310px) minmax(0,1fr);gap:16px;align-items:start}.panel{border:1px solid #293b53;border-radius:15px;background:#111c2f;padding:19px;min-width:0}.panel.controls{position:sticky;top:12px}.ctrl{margin:0 0 14px}.ctrl>label{display:flex;justify-content:space-between;gap:12px;font-size:.89rem;margin-bottom:5px}.ctrl output{font-variant-numeric:tabular-nums;color:#8ce7d0;font-weight:650}.ctrl input[type=range]{width:100%;accent-color:#58dbbf;cursor:pointer}.ctrl select{width:100%;font:inherit;background:#18283f;color:#e9f6ff;border:1px solid #45617c;border-radius:7px;padding:8px}.buttons{display:flex;flex-wrap:wrap;gap:8px}.buttons button,.primary{font:inherit;font-weight:650;cursor:pointer;background:#203852;color:#e7f9ff;border:1px solid #476680;border-radius:9px;padding:9px 13px}.buttons button:hover,.primary:hover{background:#30516c}.buttons .primary{background:#0f786d;border-color:#22b8a4}.buttons .primary:hover{background:#159887}.buttons button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #facc15;outline-offset:3px}canvas{display:block;width:100%;aspect-ratio:920/430;background:#081424;border-radius:10px;border:1px solid #38526c;touch-action:none;cursor:crosshair}.hint{margin:10px 0;font-size:.86rem;color:#b0cce4}.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:12px 0}.stat{background:#172941;border:1px solid #2b425d;border-radius:9px;padding:10px}.stat strong{display:block;font-size:clamp(1.05rem,2vw,1.35rem);font-variant-numeric:tabular-nums}.stat span{font-size:.76rem;color:#a8c3d9}.notice{font-size:.85rem;min-height:24px;color:#9ce3ff}.group{border-radius:8px;border:1px solid #35506b;padding:8px;margin:7px 0}.group-title{display:flex;justify-content:space-between;font-size:.8rem;color:#bad6e8}.group-track{height:9px;background:#39455a;margin-top:6px;border-radius:5px;overflow:hidden}.group-filled{height:100%;background:#32d1af}.below{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(275px,.85fr);gap:16px;margin-top:16px}.code-panel{min-width:0}pre{overflow:auto;max-height:580px;background:#070e1a;border:1px solid #314661;border-radius:10px;padding:16px;tab-size:4;color:#ccebf8;font:12px/1.7 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre}.steps{counter-reset:lab}.step{counter-increment:lab;border-top:1px solid #33445c;padding:13px 0}.step:before{content:counter(lab) ". ";color:#4de1c5;font-weight:800}.step strong{color:#f2f9ff}.step p{font-size:.9rem;margin:4px 0 0;color:#b9cde1}.foot{margin-top:18px;font-size:.87rem;color:#a7c1d6}.pill{display:inline-block;border:1px solid #326f77;color:#b1fff1;border-radius:99px;font-size:.75rem;padding:2px 9px;margin-left:8px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.gpu-visual-panel{margin:14px 0;padding:14px;border:1px solid #35506b;border-radius:10px;background:#0a1627}.gpu-visual-panel[hidden]{display:none}#gpu-visual{display:block;width:100%;height:auto;max-width:800px;border:1px solid #314661;border-radius:6px;margin:10px 0}#gpu-visual-summary{white-space:normal;overflow-wrap:anywhere}.code-editor,#bindings{display:block;width:100%;max-width:100%;min-width:100%;box-sizing:border-box;background:#070e1a;color:#ccebf8;border:1px solid #314661;border-radius:10px;padding:15px;font:12px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;tab-size:4;resize:vertical;white-space:pre;overflow:auto}.code-editor{height:450px;min-height:180px;margin:12px 0}#bindings{height:220px;min-height:120px}.bindings-panel{margin:13px 0;border:1px solid #35506b;border-radius:8px;padding:11px}.bindings-panel summary{font-weight:650;cursor:pointer}.check-wgsl{display:inline-flex;align-items:center;gap:7px;cursor:pointer}.result-panel{max-height:340px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}#wgsl-output[hidden]{display:none}@media(max-width:850px){.layout,.below{grid-template-columns:1fr}.panel.controls{position:static}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
-</style>
+<meta name="description" content="HLSL shader workbench. Edit, compile, execute and inspect real WebGPU compute results.">
+<meta name="theme-color" content="#0d1117">
+<title>HLSL Workbench — Compute Shader Lab</title>
+<link rel="stylesheet" href="workbench.css">
 </head>
 <body>
 <main class="wrap">
-<header>
-<div class="eyebrow">Learn HLSL by experimenting <span class="pill">Offline · No build required</span></div>
-<h1>Compute Shader Playground</h1>
-<p class="muted">Change GPU-style parameters and watch 2D particles move. See how <code>numthreads</code>, <code>SV_DispatchThreadID</code>, bounds guards and constant buffers map to a real HLSL kernel.</p>
-<p class="hint"><strong>Execution boundary:</strong> The animated particle demo uses JavaScript. The editable compute editor below can separately compile HLSL and execute translated WGSL using browser WebGPU when started through the local launcher. <a href="README.md">How it works</a>.</p>
-<div class="buttons"><button id="close-playground" type="button" aria-label="Close the playground and stop its local compiler session">Close playground &amp; stop server</button></div>
-<p class="hint">Closing this page releases its session. The local compiler exits after the last tab closes; an unresponsive tab is detected by heartbeat timeout. Your other browser tabs stay open.</p>
-</header>
-<div class="layout">
-<aside class="panel controls" aria-label="Simulation controls">
-<h2>1. Set shader parameters</h2>
-<div class="ctrl"><label for="count">Particle count <output id="countValue">64</output></label><input id="count" type="range" min="1" max="256" value="64" step="1"></div>
-<div class="ctrl"><label for="gravity">Gravity <output id="gravityValue">1.20</output></label><input id="gravity" type="range" min="0" max="5" value="1.2" step=".1"></div>
-<div class="ctrl"><label for="bounce">Wall restitution <output id="bounceValue">0.75</output></label><input id="bounce" type="range" min="0" max="1" value=".75" step=".05"></div>
-<div class="ctrl"><label for="drag">Drag <output id="dragValue">0.05</output></label><input id="drag" type="range" min="0" max="2" value=".05" step=".05"></div>
-<div class="ctrl"><label for="timestep">Fixed time step <output id="timestepValue">16 ms</output></label><input id="timestep" type="range" min="4" max="40" value="16" step="1"></div>
-<div class="ctrl"><label for="groupsize">Threads per group</label><select id="groupsize"><option>32</option><option selected>64</option><option>128</option><option>256</option></select></div>
-<div class="ctrl"><label for="speed">Playback speed <output id="speedValue">1.00×</output></label><input id="speed" type="range" min=".25" max="2" value="1" step=".25"></div>
-<div class="buttons"><button class="primary" id="pause" type="button">Pause</button><button id="step" type="button">Step once</button><button id="reset" type="button">Reset</button></div>
-<p class="hint">Drag on the canvas to launch one more ball (up to 256). The count slider recreates a reproducible layout.</p>
-</aside>
-<section class="panel" aria-label="Live visualization">
-<h2>2. Observe the particle simulation</h2>
-<canvas id="scene" width="920" height="430" aria-label="Particle simulation. Use controls to change motion; drag to launch a ball." role="img">Your browser does not support Canvas.</canvas>
-<div class="stats" aria-live="polite">
-<div class="stat"><strong id="statParticles">64</strong><span>Active particles</span></div>
-<div class="stat"><strong id="statGroups">1</strong><span>Compute workgroups</span></div>
-<div class="stat"><strong id="statIdle">0</strong><span>Idle final-group lanes</span></div>
-<div class="stat"><strong id="statSteps">0</strong><span>Simulation steps</span></div>
-</div>
-<p class="notice" id="notice" role="status">Drag in the simulation to launch a particle.</p>
-<h3>3. See how the work is dispatched</h3>
-<p class="muted">The JavaScript model iterates each workgroup and lane. Threads with <code>i &gt;= count</code> do no work, just like the shader's bounds guard.</p>
-<div id="groups" aria-label="Workgroup occupancy visualization"></div>
-</section>
-</div>
-<section class="panel" aria-label="Browser-only real GPU tutorial">
-<h2>4. Real GPU lab — no native executable <span class="pill">WGSL · WebGPU</span></h2>
-<p class="muted">The older custom Zig executable is not used by this version. This independent exercise uses <strong>WGSL</strong>, WebGPU's shading language, directly in your browser. It executes real GPU compute where WebGPU is supported, but it <strong>does not compile HLSL</strong>.</p>
-<p>Change <code>* 2.0</code> to <code>* 3.0</code>, or edit the input numbers. Compare the result against your prediction.</p>
-<label for="wgsl-code"><strong>Editable WGSL compute shader</strong></label>
-<textarea id="wgsl-code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable WGSL shader source"></textarea>
-<label for="wgsl-input"><strong>Input float array (JSON)</strong></label>
-<textarea id="wgsl-input" class="code-editor" rows="2" spellcheck="false" aria-label="Input values JSON" style="height:72px;min-height:72px;"></textarea>
-<div class="buttons"><button id="wgsl-run" class="primary" type="button">Run WGSL on GPU</button><button id="wgsl-reset" type="button">Reset WGSL example</button></div>
-<pre id="wgsl-output" class="result-panel" aria-label="WGSL GPU output" role="status" aria-live="polite">Edit the shader and click Run WGSL. No local compiler needed.</pre>
-<p class="hint">Uses your browser's WebGPU implementation. GPU support and secure-context requirements vary by browser. The shader may run from a local HTML file in supported browsers. If WebGPU is unavailable, the offline JavaScript particle animation above remains usable.</p>
-</section>
-<div class="below">
-<section class="panel code-panel">
-<h2>5. Edit and run HLSL <span class="pill">DXC · Naga · WebGPU</span></h2>
-<p class="muted">Write HLSL compute code, set buffer bindings and workgroups, and run it on your GPU through the local PowerShell/.NET compiler host. This host uses DXC and Naga without launching the previously blocked Zig server executable.</p>
-<div class="buttons"><button id="copy" type="button">Copy code</button><button id="download" type="button">Save .hlsl</button><button id="restore-example" type="button">Reset example</button><button id="example-scale" type="button">Array example</button><button id="example-circle" type="button">Circle mask example</button></div>
-<label class="sr-only" for="code">Editable HLSL compute shader source</label>
-<textarea id="code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable HLSL compute shader source"></textarea>
-<details class="bindings-panel"><summary>Buffer bindings and dispatch (editable JSON)</summary>
-<p class="muted">By default t0 → binding 0, u0 → binding 16, b0 → binding 32. Set input arrays, writable output byte sizes, workgroups and output types. Arbitrary compute shaders need matching host resources.</p>
-<label class="sr-only" for="bindings">JSON buffer layout and dispatch</label>
-<textarea id="bindings" spellcheck="false" aria-label="JSON buffer layout and dispatch"></textarea>
-</details>
-<div class="buttons"><button id="run-gpu" class="primary" type="button">Compile &amp; Run HLSL</button><label class="hint check-wgsl"><input type="checkbox" id="show-wgsl"> Show generated WGSL</label></div>
-<p class="notice" id="compile-status" role="status" aria-live="polite"></p>
-<section id="gpu-visual-panel" class="gpu-visual-panel" aria-label="Actual GPU buffer visualization" hidden>
-<h3 id="gpu-visual-title">GPU output visualization</h3>
-<canvas id="gpu-visual" width="800" height="400" role="img" aria-label="Actual GPU output plotted as a 2D heatmap, point scatter plot or numeric bars"></canvas>
-<p id="gpu-visual-legend" class="hint"></p>
-<p id="gpu-visual-summary" class="notice" role="status" aria-live="polite"></p>
-<p class="hint">This view is drawn from values read back from the GPU after each dispatch, not from the separate JavaScript physics animation. The buffer output below remains available for inspection.</p>
-</section>
-<pre id="gpu-output" class="result-panel" aria-label="Compute shader output and errors">Output appears here after a GPU run.</pre>
-<pre id="wgsl-output" class="result-panel" aria-label="Translated WGSL source" hidden></pre>
-<p class="hint"><strong>To run real HLSL compute:</strong> Double-click <code>Start-HLSL-Playground.cmd</code> in the new Windows package. It starts a PowerShell/.NET localhost host and uses included DXC + Naga compiler tools. Use the new localhost tab; opening the HTML directly is for offline learning only. <a href="README.md">Setup guide</a>. <strong>Not all HLSL runs:</strong> this host supports compatible compute buffers, not arbitrary graphics, ray tracing or all D3D12 intrinsics.</p>
-</section>
-<section class="panel steps">
-<h2>6. Try three experiments</h2>
-<div class="step"><strong>What changes with restitution?</strong><p>Set restitution to <strong>1.00</strong> and watch near-elastic wall bounces; then set <strong>0.00</strong> to make velocity along the impact normal vanish at contact. Drag remains a separate energy loss.</p></div>
-<div class="step"><strong>Why are some lanes idle?</strong><p>Set particle count to <strong>65</strong>, group size to <strong>64</strong>. You need 2 groups = 128 dispatched lanes, but only 65 are active. The remaining <strong>63</strong> must exit at the bounds check.</p></div>
-<div class="step"><strong>What does the timestep do?</strong><p>Compare <strong>4 ms</strong> and <strong>40 ms</strong> at the same gravity. The kernel uses an explicit fixed-step integrator. Larger steps can overshoot walls more and may be less accurate.</p></div>
-<div class="step"><strong>What does workgroup size do?</strong><p>Change 32 ↔ 256. Watch group count and idle lanes change while the simulation math remains the same. Larger groups are not automatically faster on actual GPUs.</p></div>
-<h3>HLSL ↔ simulation mapping</h3>
-<p><strong>cbuffer Params:</strong> Values entered on the left would be uploaded from CPU code into a constant buffer in a real D3D12 application.</p>
-<p><strong>Source / Destination:</strong> Each invocation reads one ball and writes its new state, avoiding cross-thread overwrites. The JavaScript implementation models this using separate arrays each step.</p>
-<p><strong>numthreads:</strong> Declares how many threads a group contains. The host dispatches <code>ceil(count / GROUP_SIZE)</code> workgroups.</p>
-<p><strong>SV_DispatchThreadID:</strong> Gives a global index. Use it to map a lane to one particle.</p>
-<p><strong>Limitations:</strong> No ball-to-ball collisions, no GPU parallel scheduling, no shader compilation and no hardware performance measurements in this browser view. It teaches dispatch structure and basic update equations only.</p>
-</section>
-</div>
-<p class="foot">Made for the <a href="../README.md">HLSL Handbook</a> and the <a href="../.agents/skills/hlsl-engineer/SKILL.md">hlsl-engineer Agent Skill</a>. No external scripts, libraries, tracking or network requests are required.</p>
+  <header class="site-header">
+    <div class="brand">
+      <span class="brand-icon" aria-hidden="true">HLSL</span>
+      <div>
+        <div class="brand-title">HLSL Workbench</div>
+        <div class="brand-sub">Compute shader tools</div>
+      </div>
+    </div>
+    <nav class="header-actions" aria-label="Workspace navigation">
+      <a href="README.md">Documentation</a>
+      <button class="quiet-button" id="close-playground" type="button" aria-label="End this playground session and stop the local compiler">End session</button>
+    </nav>
+  </header>
+
+  <section class="hero" aria-labelledby="page-heading">
+    <div>
+      <div class="eyebrow">Compute / Shader Model 6.0</div>
+      <h1 id="page-heading">Write a shader. See the result.</h1>
+      <p>A local HLSL editor with direct GPU output inspection.</p>
+    </div>
+    <div class="pipeline" aria-label="Compilation pipeline">
+      <strong>HLSL</strong> &nbsp;→&nbsp; DXC &nbsp;→&nbsp; Naga &nbsp;→&nbsp; <strong>WebGPU</strong>
+    </div>
+  </section>
+
+  <section class="workbench" aria-label="HLSL compute shader workbench">
+    <div class="workbench-bar">
+      <div>
+        <div class="workbench-label">Compute workspace</div>
+        <div class="workbench-meta">cs_6_0 &nbsp;·&nbsp; local compiler &nbsp;·&nbsp; GPU readback</div>
+      </div>
+      <div class="preset-bar" role="group" aria-label="Load a shader example">
+        <span class="preset-label">Load example</span>
+        <button id="example-circle" class="preset-button" type="button" aria-pressed="true">Circle mask</button>
+        <button id="example-scale" class="preset-button" type="button" aria-pressed="false">Array transform</button>
+        <button id="restore-example" class="preset-button" type="button" aria-pressed="false">Particles</button>
+      </div>
+    </div>
+
+    <div class="workspace-grid">
+      <section class="editor-surface" aria-label="HLSL code editor">
+        <div class="pane-header">
+          <div class="pane-label"><span class="file-mark" aria-hidden="true"></span> shader.hlsl</div>
+          <div class="editor-tools">
+            <button id="copy" type="button">Copy</button>
+            <button id="download" type="button">Save .hlsl</button>
+          </div>
+        </div>
+        <label class="sr-only" for="code">Editable HLSL compute shader source</label>
+        <textarea id="code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable HLSL compute shader source"></textarea>
+        <details class="bindings-panel">
+          <summary>Resource bindings &amp; dispatch <span class="pane-hint">JSON / advanced</span></summary>
+          <p class="muted">t0 → 0 · u0 → 16 · b0 → 32. Edit input data, output layout and dispatch dimensions.</p>
+          <label class="sr-only" for="bindings">JSON buffer layout and dispatch</label>
+          <textarea id="bindings" spellcheck="false" aria-label="JSON buffer layout and dispatch"></textarea>
+        </details>
+        <div class="run-bar">
+          <div class="run-controls">
+            <button id="run-gpu" class="primary" type="button">Compile &amp; Run HLSL</button>
+            <span class="run-hint">Ctrl + Enter</span>
+            <label class="check-wgsl"><input type="checkbox" id="show-wgsl"> Show WGSL</label>
+          </div>
+          <p id="compile-status" role="status" aria-live="polite">Ready to compile.</p>
+        </div>
+      </section>
+
+      <section class="preview-surface" aria-label="Shader output and GPU visualization">
+        <div class="pane-header">
+          <div class="pane-label">Output</div>
+          <div class="pane-hint">READBACK / BUFFER 16</div>
+        </div>
+        <div class="preview-stage">
+          <div id="gpu-preview-empty" class="preview-empty">
+            <div class="preview-empty-inner">
+              <div class="empty-graphic" aria-hidden="true"></div>
+              <h3>No GPU result yet</h3>
+              <p>Choose an example and run it to see the actual output here.</p>
+            </div>
+          </div>
+          <section id="gpu-visual-panel" class="gpu-visual-panel" aria-label="Actual GPU output visualization" hidden>
+            <div class="visual-heading">
+              <h3 id="gpu-visual-title">GPU output</h3>
+              <span class="data-provenance">WebGPU / readback</span>
+            </div>
+            <div class="visual-chart">
+              <canvas id="gpu-visual" width="640" height="640" role="img" aria-label="Actual GPU output, plotted as a square mask heatmap, XY scatter, or numeric bar chart"></canvas>
+            </div>
+            <p id="gpu-visual-legend"></p>
+            <div class="visual-metrics" aria-label="GPU buffer statistics">
+              <div class="visual-metric"><span>Samples</span><strong id="viz-samples">—</strong></div>
+              <div class="visual-metric"><span>Coverage</span><strong id="viz-coverage">—</strong></div>
+              <div class="visual-metric"><span>Range</span><strong id="viz-range">—</strong></div>
+              <div class="visual-metric"><span>Mean</span><strong id="viz-mean">—</strong></div>
+            </div>
+            <p id="gpu-visual-summary" role="status" aria-live="polite"></p>
+          </section>
+        </div>
+        <div class="inspectors">
+          <details id="debug-output-panel">
+            <summary>Raw buffer &amp; diagnostics</summary>
+            <pre id="gpu-output" class="result-panel" aria-label="Compute shader output and errors">Run a shader to inspect its buffer contents.</pre>
+          </details>
+          <details id="wgsl-details">
+            <summary>Generated WGSL</summary>
+            <pre id="wgsl-output" class="result-panel" aria-label="Translated WGSL source" hidden></pre>
+          </details>
+        </div>
+      </section>
+    </div>
+    <div class="workbench-foot">
+      Runs compatible HLSL compute shaders through the local DXC/Naga host. Output is read back from WebGPU.
+      <a href="README.md">Setup &amp; limitations</a>
+    </div>
+  </section>
+
+  <section class="after-workbench" aria-label="Additional shader learning labs">
+    <h2>Other labs</h2>
+    <p class="section-intro">Optional exercises. These run separately from the HLSL compute workbench.</p>
+
+    <details class="secondary-lab">
+      <summary><span class="secondary-title">Particle sandbox</span><span class="secondary-desc">JavaScript simulation · workgroups, timesteps and collisions</span></summary>
+      <div class="secondary-content">
+        <div class="demo-grid">
+          <aside class="demo-controls" aria-label="Simulation controls">
+            <div class="ctrl"><label for="count">Particle count <output id="countValue">64</output></label><input id="count" type="range" min="1" max="256" value="64" step="1"></div>
+            <div class="ctrl"><label for="gravity">Gravity <output id="gravityValue">1.20</output></label><input id="gravity" type="range" min="0" max="5" value="1.2" step=".1"></div>
+            <div class="ctrl"><label for="bounce">Wall restitution <output id="bounceValue">0.75</output></label><input id="bounce" type="range" min="0" max="1" value=".75" step=".05"></div>
+            <div class="ctrl"><label for="drag">Drag <output id="dragValue">0.05</output></label><input id="drag" type="range" min="0" max="2" value=".05" step=".05"></div>
+            <div class="ctrl"><label for="timestep">Fixed time step <output id="timestepValue">16 ms</output></label><input id="timestep" type="range" min="4" max="40" value="16" step="1"></div>
+            <div class="ctrl"><label for="groupsize">Threads per group</label><select id="groupsize"><option>32</option><option selected>64</option><option>128</option><option>256</option></select></div>
+            <div class="ctrl"><label for="speed">Playback speed <output id="speedValue">1.00×</output></label><input id="speed" type="range" min=".25" max="2" value="1" step=".25"></div>
+            <div class="buttons"><button class="primary" id="pause" type="button">Pause</button><button id="step" type="button">Step once</button><button id="reset" type="button">Reset</button></div>
+            <p class="hint">Drag on the simulation to launch a particle.</p>
+          </aside>
+          <section aria-label="JavaScript particle visualization">
+            <canvas id="scene" width="920" height="430" aria-label="JavaScript particle simulation, drag to launch a ball" role="img">Canvas required.</canvas>
+            <div class="stats" aria-live="polite">
+              <div class="stat"><strong id="statParticles">64</strong><span>Active particles</span></div>
+              <div class="stat"><strong id="statGroups">1</strong><span>Workgroups</span></div>
+              <div class="stat"><strong id="statIdle">0</strong><span>Idle lanes</span></div>
+              <div class="stat"><strong id="statSteps">0</strong><span>Steps</span></div>
+            </div>
+            <p class="notice" id="notice" role="status">Drag in the simulation to launch a particle.</p>
+            <h3>Workgroup occupancy</h3>
+            <div id="groups" aria-label="Workgroup occupancy visualization"></div>
+          </section>
+        </div>
+      </div>
+    </details>
+
+    <details class="secondary-lab">
+      <summary><span class="secondary-title">WGSL scratchpad</span><span class="secondary-desc">Direct WebGPU · no local compiler required</span></summary>
+      <div class="secondary-content">
+        <p class="muted">This is a separate WGSL compute exercise, not HLSL. Change the multiplier and inspect the returned numbers.</p>
+        <label for="wgsl-code">WGSL source</label>
+        <textarea id="wgsl-code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable WGSL shader source"></textarea>
+        <label for="wgsl-input">Input values (JSON)</label>
+        <textarea id="wgsl-input" class="code-editor" rows="2" spellcheck="false" aria-label="Input values JSON"></textarea>
+        <div class="buttons"><button id="wgsl-run" class="primary" type="button">Run WGSL on GPU</button><button id="wgsl-reset" type="button">Reset</button></div>
+        <pre id="wgsl-output" class="result-panel" aria-label="WGSL GPU output" role="status" aria-live="polite">Edit the shader and run it to inspect the output.</pre>
+      </div>
+    </details>
+
+    <details class="secondary-lab">
+      <summary><span class="secondary-title">Dispatch notes</span><span class="secondary-desc">Practical details behind workgroups and buffer layouts</span></summary>
+      <div class="secondary-content steps">
+        <div class="step"><strong>Workgroup occupancy</strong><p>65 particles at 64 threads per group dispatches 128 lanes. The last 63 lanes exit at the bounds guard.</p></div>
+        <div class="step"><strong>Time integration</strong><p>A larger timestep can overshoot collision boundaries and reduce precision. The particle simulation uses a fixed-step integrator.</p></div>
+        <div class="step"><strong>Memory layout</strong><p>Each invocation reads one particle and writes a distinct destination. A constant buffer supplies the common simulation parameters.</p></div>
+        <div class="step"><strong>Execution distinction</strong><p>The main workbench compiles HLSL and executes WGSL on WebGPU. The particle sandbox is a separate JavaScript teaching model.</p></div>
+      </div>
+    </details>
+  </section>
+
+  <footer class="foot">HLSL Workbench · <a href="README.md">Documentation</a> · <a href="https://github.com/Cryosimorgh/HLSL-Docs">Source</a></footer>
 </main>
 
 <script id="shader-source" type="text/plain">
