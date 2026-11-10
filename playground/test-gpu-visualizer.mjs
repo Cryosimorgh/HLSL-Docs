@@ -76,6 +76,19 @@ rendered=viz.render({
 assert.equal(rendered.st.min,-2);
 assert.equal(rendered.st.max,6);
 assert.equal(rendered.st.mean,1.5);
+// Julia fractal mode must render the GPU's iteration intensity, not a CPU image.
+const julia=new Float32Array(4*4*4);
+for(let i=0;i<16;i++){julia[i*4]=i%4;julia[i*4+1]=Math.floor(i/4);julia[i*4+2]=i/15;}
+const juliaResult=viz.render({
+  bytes:julia.buffer,format:"vec4",binding:16,source:"Julia loop",
+  visualize:{mode:"grid-fractal",grid:{width:4,height:4,xMax:1,yMax:1},channel:2}
+});
+assert.equal(juliaResult.kind,"fractal");
+assert.equal(juliaResult.st.valid,16);
+assert.equal(juliaResult.st.min,0);
+assert.equal(juliaResult.st.max,1);
+assert.match(nodes["gpu-visual-title"].textContent,/Julia fractal/);
+assert.equal(nodes["viz-coverage"].textContent,"50.0%");
 viz.clear();
 assert.equal(nodes["gpu-visual-panel"].hidden,true);
 console.log("PASS: GPU-readback heatmap, zero-mask explanation, scatter, numeric bars and reset");
