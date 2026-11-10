@@ -1,14 +1,14 @@
 # Interactive HLSL Compute Playground
 
-**[Download the Windows v1.5.2 client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.5.2.zip)** · [Handbook](../README.md) · [Compute shader source](particle-step.hlsl)
+**[Download the Windows v1.6.0 client](https://github.com/Cryosimorgh/HLSL-Docs/releases/download/v1.5.0/HLSL-Playground-Windows-v1.6.0.zip)** · [Handbook](../README.md) · [Compute shader source](particle-step.hlsl)
 
 ## Run real HLSL on Windows
 
-1. Extract the **entire** Windows v1.5.2 ZIP into a new folder.
+1. Extract the **entire** Windows v1.6.0 ZIP into a new folder.
 2. Double-click **Start-HLSL-Playground.cmd** at the root of that folder.
-3. The launcher starts a loopback-only **PowerShell/.NET** compiler bridge and opens your browser to `http://127.0.0.1:<port>/`. Use this new browser tab, not a `file://` tab.
-4. In the HLSL editor, click **Array example**. Try changing `Input[tid.x] * 2.0` to `Input[tid.x] * 3.0`.
-5. Click **Compile & Run HLSL**. The panel shows the output array and any compilation diagnostics. Enable **Show generated WGSL** to inspect the translated shader.
+3. The launcher starts a loopback-only **PowerShell/.NET** compiler bridge and opens your browser to `http://127.0.0.1:<port>/`. Use this new tab, not a `file://` tab. The **Circle mask** preset is loaded automatically.
+4. Click **Compile & Run HLSL** or press **Ctrl+Enter** in the editor. The 2D GPU mask is shown directly alongside the code. Select **Array transform** to try scalar output.
+5. Expand **Resource bindings & dispatch** to edit the circle center/radius, then rerun. Raw outputs and generated WGSL are available in the collapsed output inspectors. The separate particle and WGSL labs are under **Other labs**.
 6. Close the tab or click **Close playground & stop server**. The local host exits when the last connected playground tab closes. If the browser crashes, a heartbeat timeout closes it automatically.
 
 **No installation required** of Zig, Rust, Cargo or Node. The ZIP includes Microsoft DXC and a prebuilt Naga shader translator, while the host uses the Windows PowerShell and .NET runtime. Neither the package nor the launcher runs the previously flagged `hlsl-server.exe` Zig binary.
@@ -17,7 +17,7 @@
 
 ## See what your HLSL shader actually produced
 
-The new **GPU output visualization** appears above the raw buffer dump after **Compile & Run HLSL**. Unlike the JavaScript particle demo, it is drawn from `GPUBuffer.mapAsync()` **after the translated shader has executed on WebGPU**.
+The **GPU output visualization** is the main right-hand pane of the workbench after **Compile & Run HLSL**. Raw output and generated WGSL remain in optional inspectors. Unlike the JavaScript particle demo, it is drawn from `GPUBuffer.mapAsync()` **after the translated shader has executed on WebGPU**.
 
 - **Circle mask example:** click the new preset, then **Compile & Run HLSL**. It generates 1,024 input positions on a 32×32 grid, uses a circle radius of `0.34` (world units) and edge width `0.025`, and displays a 2D heatmap. Aqua cells have mask near 1; dark cells have mask near 0. A summary reports min, max, mean and count of cells with mask ≥0.5.
 - **Other float4 outputs:** a scatter plot shows x/y coordinates; the color represents the third float channel (z). If the source contains a circle mask, the summary identifies all-zero masks instead of leaving a blank result.
@@ -95,4 +95,4 @@ Opening `playground/index.html` directly without the launcher provides the JavaS
 
 The repository's Windows CI runs `node playground/test-powershell.mjs` **only as a test client**, including real DXC/Naga compilation through the PowerShell HTTP API. Users do not need Node.
 
-[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.5.2.md)
+[See source](server.ps1) · [Release notes](../RELEASE_NOTES_v1.6.0.md)
