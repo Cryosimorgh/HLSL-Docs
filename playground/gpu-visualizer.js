@@ -35,7 +35,7 @@ function palette(t) {
 function setup(ctx,label,worldAspect=1) {
   // Match the plot's physical X/Y aspect ratio; never stretch circles.
   const aspect=clamp(finite(worldAspect)&&worldAspect>0?worldAspect:1,0.2,5);
-  const available=Math.min(W-104,H-124);
+  const available=Math.min(W-58,H-64);
   const width=aspect>=1?available:available*aspect;
   const height=aspect>=1?available/aspect:available;
   const m={left:(W-width)/2,top:(H-height)/2-8,width,height};
