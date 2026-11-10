@@ -101,8 +101,22 @@ try {
             const converted=await response.json();
             assert.match(converted.wgsl,/@compute/);
             assert.equal(converted.mapping.u0,16);
+            assert.equal(converted.cacheHit,false,"First compilation must run real tools");
+            assert.ok(Number.isFinite(converted.compileMs),"Server must report compiler latency");
             console.log("PASS real DXC + Naga conversion:",name);
         }
+        const shader=await readFile(join(folder,"julia-rgba.hlsl"),"utf8");
+        const repeat=await post("/api/compile",{source:shader,entry:"CSMain"});
+        assert.equal(repeat.status,200);
+        const cached=await repeat.json();
+        assert.equal(cached.cacheHit,true,"Identical HLSL must reuse DXC/Naga translation");
+        assert.equal(cached.compileMs,0,"Cache hit must skip compiler processes");
+        assert.match(cached.wgsl,/@compute/);
+        const changed=await post("/api/compile",{source:shader+"\n// cache invalidation",entry:"CSMain"});
+        assert.equal(changed.status,200);
+        const recompiled=await changed.json();
+        assert.equal(recompiled.cacheHit,false,"Edited HLSL must invalidate compilation cache");
+        console.log("PASS compiler cache hit/invalidation:",cached.cacheHit,recompiled.cacheHit);
     }
     assert.equal(await fetchedStatus(post("/api/session/close",{token:b})),200);
     await exited();
