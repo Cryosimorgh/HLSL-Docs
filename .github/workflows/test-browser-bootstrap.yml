@@ -8,6 +8,11 @@ on:
       - 'playground/live-runner.js'
       - 'playground/animation-runner.js'
       - 'playground/gpu-visualizer.js'
+      - 'playground/hlsl-fold-docs.js'
+      - 'playground/hlsl-docs-data.js'
+      - 'playground/hlsl-reference.html'
+      - 'playground/hlsl-reference.js'
+      - 'playground/workbench.css'
       - 'playground/test-browser-bootstrap.mjs'
       - '.github/workflows/test-browser-bootstrap.yml'
   workflow_dispatch:
