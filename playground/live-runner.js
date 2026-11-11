@@ -56,6 +56,29 @@ function sendCloseBeacon() {
   leaseToken = null;
 }
 async function closePlayground() {
+  // The Go edition deliberately outlives tabs. Only explicit Stop server
+  // should shut it down; leave the legacy PowerShell session flow intact.
+  if (isBridgeOrigin) {
+    try {
+      const healthResponse = await fetch("/api/health", {cache:"no-store"});
+      const health = healthResponse.ok ? await healthResponse.json() : null;
+      if (health?.backend === "go") {
+        if (!confirm("Stop the persistent Sunder HLSL Go server? Closing this browser tab alone keeps it running.")) return;
+        const button = $("close-playground");
+        button.disabled = true;
+        try {
+          const response = await fetch("/api/server/stop", {
+            method:"POST",headers:{"Content-Type":"application/json"},body:"{}"
+          });
+          if (!response.ok) throw Error("HTTP " + response.status);
+          setStatus("Go server stopped. Run Start-HLSL-Workbench.cmd to restart.");
+        } catch (error) {
+          button.disabled=false;setStatus("Unable to stop server: "+error.message,true);
+        }
+        return;
+      }
+    } catch { /* Continue through the legacy session shutdown path. */ }
+  }
   $("close-playground").disabled = true;
   if (!leaseClosed && leaseToken && isBridgeOrigin) {
     const token = leaseToken;
