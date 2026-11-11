@@ -111,31 +111,38 @@
     return null;
   }
 
-  let activeKey="",cm,pinned=false,hideTimer=0;
+  // Passive documentation must never chase the mouse or interrupt scrolling.
+  // Wait until the pointer has rested on a symbol; explicit F1/right-click pin
+  // stays immediate. A scroll also requires a fresh deliberate hover.
+  const hoverDelayMs=800, scrollQuietMs=1000;
+  let activeKey="",cm,pinned=false,hideTimer=0,hoverTimer=0;
+  let selecting=false,tooltipSelecting=false,scrollQuietUntil=0;
   const pinState=$("hlsl-help-pin-state");
+  function cancelHover(){
+    if(hoverTimer){clearTimeout(hoverTimer);hoverTimer=0;}
+  }
   function cancelHide(){if(hideTimer){clearTimeout(hideTimer);hideTimer=0;}}
   function hide(force=false){
     if(pinned&&!force)return;
-    cancelHide();
+    cancelHover();cancelHide();
     tooltip.hidden=true;activeKey="";
     if(force)pinned=false;
-    if(pinState)pinState.textContent="";
+    if(pinState)pinState.textContent="Hover 0.8s or right-click to pin";
   }
   function scheduleHide(){
-    if(pinned)return;
-    cancelHide();
+    if(pinned||tooltipSelecting)return;
+    cancelHover();cancelHide();
     hideTimer=setTimeout(()=>{
       hideTimer=0;
-      if(!tooltip.matches(":hover")&&!cm.getWrapperElement().matches(":hover"))
-        hide();
-    },300);
+      if(!tooltipSelecting&&!tooltip.matches(":hover"))hide();
+    },350);
   }
   function show(item,clientX,clientY,pin=false){
     if(!item){scheduleHide();return;}
     if(pinned&&!pin)return;
-    cancelHide();
+    cancelHover();cancelHide();
     if(pin)pinned=true;
-    if(pinState)pinState.textContent=pinned?"Pinned · Esc or × to close":"Hover or right-click to pin";
+    if(pinState)pinState.textContent=pinned?"Pinned · Esc or × to close":"Hover 0.8s or right-click to pin";
     if(activeKey!==item.key){
       activeKey=item.key;
       help.title.textContent=item.title+" · "+item.key;
@@ -151,6 +158,23 @@
     const top=clientY+h+18>window.innerHeight?
       Math.max(8,clientY-h-14):clientY+18;
     tooltip.style.left=left+"px";tooltip.style.top=top+"px";
+  }
+  function queueHover(item,x,y){
+    // Every movement restarts the dwell timer. Changing symbols before it
+    // fires never opens a popup. Keep an existing popup during the brief
+    // pointer journey into it so links/text remain reachable.
+    cancelHover();cancelHide();
+    if(selecting||performance.now()<scrollQuietUntil)return;
+    hoverTimer=setTimeout(()=>{
+      hoverTimer=0;
+      if(!pinned&&!selecting&&performance.now()>=scrollQuietUntil)
+        show(item,x,y);
+    },hoverDelayMs);
+  }
+  function interruptForScroll(){
+    scrollQuietUntil=performance.now()+scrollQuietMs;
+    cancelHover();
+    hide(); // Pinned documentation remains available while scrolling.
   }
   function wordAt(cm,pos){
     const line=cm.getLine(pos.line);
@@ -171,7 +195,7 @@
     const pos=editor.getCursor(),item=wordAt(editor,pos);
     if(!item)return;
     const coords=editor.charCoords(pos,"window");
-    show(item,coords.left,coords.bottom);
+    show(item,coords.left,coords.bottom,true);
   }
   cm=CM.fromTextArea(source,{
     mode:"hlsl",lineNumbers:true,lineWrapping:false,
@@ -243,51 +267,83 @@
   }
   foldAllButton?.addEventListener("click",foldAll);
   unfoldAllButton?.addEventListener("click",unfoldAll);
-  cm.getWrapperElement().addEventListener("mousemove",event=>{
+  const wrapper=cm.getWrapperElement();
+  wrapper.addEventListener("mousemove",event=>{
     if(pinned)return;
+    // Mouse-down selection, scrollbar dragging, wheel scrolling and rapid
+    // pointer movement should never cause the reference popup to appear.
+    if(selecting||event.buttons||performance.now()<scrollQuietUntil){
+      cancelHover();hide();return;
+    }
+    if(event.target.closest?.(".CodeMirror-gutters")){
+      scheduleHide();return;
+    }
     const pos=cm.coordsChar({left:event.clientX,top:event.clientY},"window");
     const item=wordAt(cm,pos);
-    if(item)show(item,event.clientX,event.clientY);
-    else scheduleHide();
+    if(!item){scheduleHide();return;}
+    if(!tooltip.hidden&&activeKey===item.key){
+      cancelHover();cancelHide();return;
+    }
+    queueHover(item,event.clientX,event.clientY);
   });
-  cm.getWrapperElement().addEventListener("mouseleave",event=>{
+  wrapper.addEventListener("mouseleave",event=>{
+    cancelHover();
     if(tooltip.contains(event.relatedTarget)){cancelHide();return;}
     scheduleHide();
   });
-  // Right-clicking a recognized HLSL token pins its reference and suppresses
-  // the normal browser menu, leaving examples and documentation links usable.
-  cm.getWrapperElement().addEventListener("contextmenu",event=>{
+  wrapper.addEventListener("pointerdown",event=>{
+    cancelHover();
+    if(event.button!==2){
+      selecting=true;
+      hide();
+    }
+  });
+  document.addEventListener("pointerup",()=>{
+    selecting=false;
+    if(tooltipSelecting){
+      tooltipSelecting=false;
+      if(!tooltip.matches(":hover"))scheduleHide();
+    }
+  });
+  // Right-click is an explicit request: open immediately, without waiting.
+  wrapper.addEventListener("contextmenu",event=>{
+    if(event.target.closest?.(".CodeMirror-gutters"))return;
     const pos=cm.coordsChar({left:event.clientX,top:event.clientY},"window");
     const item=wordAt(cm,pos);
-    if(!item)return;
-    event.preventDefault();
-    event.stopPropagation();
+    if(!item)return; // Normal browser context menu for unknown symbols.
+    event.preventDefault();event.stopPropagation();
     show(item,event.clientX,event.clientY,true);
   });
-  tooltip.addEventListener("mouseenter",cancelHide);
-  tooltip.addEventListener("mouseleave",scheduleHide);
+  tooltip.addEventListener("mouseenter",()=>{cancelHover();cancelHide();});
+  tooltip.addEventListener("mouseleave",()=>{
+    if(!tooltipSelecting)scheduleHide();
+  });
+  tooltip.addEventListener("pointerdown",()=>{
+    tooltipSelecting=true;cancelHide();
+  });
   tooltip.addEventListener("contextmenu",event=>{
-    event.preventDefault();
-    event.stopPropagation();
-    if(!tooltip.hidden){
-      pinned=true;cancelHide();
-      if(pinState)pinState.textContent="Pinned · Esc or × to close";
-    }
+    event.preventDefault();event.stopPropagation();
+    if(!tooltip.hidden){pinned=true;cancelHover();cancelHide();
+      if(pinState)pinState.textContent="Pinned · Esc or × to close";}
   });
   $("hlsl-help-close")?.addEventListener("click",()=>hide(true));
   document.addEventListener("pointerdown",event=>{
     if(pinned&&!tooltip.contains(event.target)&&
-       !cm.getWrapperElement().contains(event.target))hide(true);
+       !wrapper.contains(event.target))hide(true);
   },true);
-  cm.on("scroll",scheduleHide);
-  cm.on("cursorActivity",scheduleHide);
-  document.addEventListener("keydown",event=>{
-    if(event.key==="Escape")hide(true);
+  document.addEventListener("wheel",event=>{
+    if(!tooltip.contains(event.target))interruptForScroll();
+  },{capture:true,passive:true});
+  window.addEventListener("scroll",interruptForScroll,{passive:true});
+  cm.on("scroll",interruptForScroll);
+  cm.on("cursorActivity",()=>{
+    cancelHover();scheduleHide();
   });
+  document.addEventListener("keydown",event=>{if(event.key==="Escape")hide(true);});
   window.addEventListener("blur",()=>hide(true));
   window.HLSLFoldDocs={
     editor:cm,refresh,foldAll,unfoldAll,
-    showHelp:key=>{const item=docs.get(key);if(item)show(item,160,100);return !!item;},
+    showHelp:key=>{const item=docs.get(key);if(item)show(item,160,100,true);return !!item;},
     get helpPinned(){return pinned;},
     dismissHelp:()=>hide(true),
     getFoldRange:line=>rangeFinder(cm,CM.Pos(line,0))
