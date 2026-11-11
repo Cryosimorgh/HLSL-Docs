@@ -223,7 +223,7 @@ func (a *application) routes() http.Handler {
 	}))
 	// Allow only known app assets. No arbitrary filesystem browsing.
 	assets := map[string]string{
-		"/": "index.html", "/index.html": "index.html", "/favicon.ico": "favicon.ico",
+		"/": "index.html", "/index.html": "index.html", "/favicon.ico": "favicon.ico", "/sunder-mark.svg": "sunder-mark.svg",
 	}
 	for _, file := range []string{"live-runner.js", "animation-runner.js", "desktop-files.js", "sunder-ide.js", "sunder-ide.css", "julia-loop.hlsl", "julia-rgba.hlsl", "particles-rgba.hlsl", "browser-gpu.js", "gpu-visualizer.js", "hlsl-highlight.js", "hlsl-fold-docs.js", "hlsl-intellisense.js", "hlsl-docs-data.js", "hlsl-reference.js", "hlsl-reference.html", "workbench.css", "circle-mask.hlsl", "particle-step.hlsl", "README.md", "vendor/codemirror/codemirror.js", "vendor/codemirror/codemirror.css", "vendor/codemirror/clike.js", "vendor/codemirror/foldcode.js", "vendor/codemirror/foldgutter.js", "vendor/codemirror/foldgutter.css", "vendor/codemirror/show-hint.js", "vendor/codemirror/show-hint.css"} {
 		assets["/"+file] = file
