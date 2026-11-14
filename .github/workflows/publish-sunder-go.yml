@@ -15,7 +15,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  linux-go-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+          cache: false
+      - name: Run all Go unit tests with race detector
+        run: cd go-server && go test -race ./...
+
   windows-release:
+    needs: linux-go-tests
     runs-on: windows-2022
     timeout-minutes: 35
     steps:
@@ -57,9 +69,25 @@ jobs:
             Copy-Item -LiteralPath $source.FullName -Destination $bins[$name] -Force
           }
           Write-Host 'Restored bundled DXC, DXIL and Naga tools.'
-      - name: Run Go tests and build Windows desktop executable
-        shell: cmd
-        run: BUILD-WINDOWS.cmd
+      - name: Run Windows-compatible Go host tests
+        shell: pwsh
+        run: |
+          Push-Location go-server
+          go test -v -run 'TestPersistentServerAndHostSecurity|TestOpenSaveAndConflicts' ./...
+          if ($LASTEXITCODE -ne 0) { throw 'Windows Go host tests failed' }
+          Pop-Location
+      - name: Build Windows desktop executable with embedded icon
+        shell: pwsh
+        run: |
+          $resource = 'go-server/icon_windows_amd64.syso'
+          if (-not (Test-Path -LiteralPath $resource)) {
+            certutil -f -decode 'go-server/icon_windows_amd64.syso.b64' $resource | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'Could not restore Windows icon resource' }
+          }
+          Push-Location go-server
+          go build -trimpath -ldflags="-s -w -H windowsgui" -o '../HLSLWorkbench.exe' .
+          if ($LASTEXITCODE -ne 0) { throw 'Windows Go build failed' }
+          Pop-Location
       - name: Smoke-test actual DXC to Naga translation
         shell: pwsh
         run: |
