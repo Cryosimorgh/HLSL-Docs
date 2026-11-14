@@ -1,4 +1,6 @@
-> **Sunder Go-hosted IDE preview:** The persistent standalone Go server and violet desktop-style workbench live on the \`feature/sunder-ide-go-ui\` branch. See [Go build and file association instructions](go-server/README.md). The established PowerShell release remains available; the feature branch is not yet merged or Windows GPU-qualified.\n\n# HLSL Handbook — High-Level Shader Language, DirectX 12 & GPU Shader Programming
+> **Sunder Go-hosted IDE (v2.0.0):** The standalone persistent Go server and violet workbench are merged into `main`. The [Windows release workflow](.github/workflows/publish-sunder-go.yml) builds and publishes the portable Go Windows x64 package with DXC/Naga; see [Releases](https://github.com/Cryosimorgh/HLSL-Docs/releases) and [Go setup and file association instructions](go-server/README.md). Windows GPU/driver performance is not yet formally qualified.
+
+# HLSL Handbook — High-Level Shader Language, DirectX 12 & GPU Shader Programming
 
 **A practical HLSL reference and tutorial** for graphics shaders, compute shaders, DirectX 12, DirectX Shader Compiler (DXC), Shader Model 6, GPU memory, texture sampling, resource bindings and shader intrinsics.
 
