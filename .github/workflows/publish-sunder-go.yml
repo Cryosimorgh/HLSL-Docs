@@ -3,9 +3,9 @@ name: Publish Sunder Go HLSL Workbench Windows release
 on:
   push:
     branches: [main]
-    paths:
-      - .github/workflows/publish-sunder-go.yml
   workflow_dispatch:
+  schedule:
+    - cron: '17,47 * * * *'
 
 permissions:
   contents: write
@@ -15,7 +15,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  release-needed:
+    runs-on: ubuntu-latest
+    outputs:
+      required: ${{ steps.inspect.outputs.required }}
+    steps:
+      - id: inspect
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          tag='v2.1.0'
+          zip='Sunder-HLSL-Workbench-Go-v2.1.0-Windows-x64.zip'
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" \
+             --json isDraft,assets \
+             --jq "(.isDraft | not) and ([.assets[].name] | index(\"$zip\") != null) and ([.assets[].name] | index(\"sunder-update-manifest.json\") != null)" \
+             2>/dev/null | grep -qx true; then
+            echo 'required=false' >> "$GITHUB_OUTPUT"
+            echo 'Complete v2.1.0 GitHub release already exists.'
+          else
+            echo 'required=true' >> "$GITHUB_OUTPUT"
+            echo 'Release missing or incomplete; build and publish.'
+          fi
+
   linux-go-tests:
+    needs: release-needed
+    if: needs.release-needed.outputs.required == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -141,7 +166,7 @@ jobs:
             if (-not (Test-Path -LiteralPath (Join-Path $stage $file))) { throw "Packaged file missing: $file" }
           }
           @'
-          # Sunder HLSL Workbench — Go Edition v2.0.0
+          # Sunder HLSL Workbench — Go Edition v2.1.0
 
           Extract the complete archive into a permanent directory on Windows x64.
 
@@ -179,8 +204,6 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $tag = 'v2.1.0'
-          gh release view $tag --repo $env:GITHUB_REPOSITORY --json tagName 2>$null | Out-Null
-          if ($LASTEXITCODE -eq 0) { throw "Release $tag already exists; refusing to overwrite it" }
           @'
           Sunder HLSL Workbench v2.1.0: verified incremental updates, higher-resolution HLSL output, GPU-native preview and faster repeat compilation.
 
@@ -203,10 +226,19 @@ jobs:
           # Publish as draft until every delta asset is uploaded successfully.
           $deltaDir = Join-Path $PWD 'release-delta-assets'
           $manifestFile = Join-Path $deltaDir 'sunder-update-manifest.json'
-          gh release create $tag $zip ($zip + '.sha256') $manifestFile --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title 'Sunder HLSL Workbench v2.1.0 — Delta Updates & GPU Performance' --notes-file SUNDER-GO-RELEASE-NOTES.md --draft
-          if ($LASTEXITCODE -ne 0) { throw 'Failed to create draft release' }
+          $old = gh release view $tag --repo $env:GITHUB_REPOSITORY --json isDraft,assets 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            $existing = $old | ConvertFrom-Json
+            if (-not $existing.isDraft) { throw 'Release exists but is incomplete; manual review required to avoid overwriting published assets' }
+            Write-Host 'Resuming existing draft release after prior interrupted upload.'
+          } else {
+            gh release create $tag --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title 'Sunder HLSL Workbench v2.1.0 — Delta Updates & GPU Performance' --notes-file SUNDER-GO-RELEASE-NOTES.md --draft
+            if ($LASTEXITCODE -ne 0) { throw 'Failed to create draft release' }
+          }
+          gh release upload $tag $zip ($zip + '.sha256') $manifestFile --repo $env:GITHUB_REPOSITORY --clobber
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to upload complete Windows ZIP, checksum or manifest' }
           foreach ($asset in @(Get-ChildItem -LiteralPath $deltaDir -Filter 'delta-*.bin' -File)) {
-            gh release upload $tag $asset.FullName --repo $env:GITHUB_REPOSITORY
+            gh release upload $tag $asset.FullName --repo $env:GITHUB_REPOSITORY --clobber
             if ($LASTEXITCODE -ne 0) { throw ("Failed to upload delta asset: " + $asset.Name) }
           }
           gh release edit $tag --repo $env:GITHUB_REPOSITORY --draft=false --latest
