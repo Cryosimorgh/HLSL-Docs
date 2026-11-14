@@ -1,4 +1,4 @@
-> **Sunder Go-hosted IDE (v2.0.0):** The standalone persistent Go server and violet workbench are merged into `main`. The [Windows release workflow](.github/workflows/publish-sunder-go.yml) builds and publishes the portable Go Windows x64 package with DXC/Naga; see [Releases](https://github.com/Cryosimorgh/HLSL-Docs/releases) and [Go setup and file association instructions](go-server/README.md). Windows GPU/driver performance is not yet formally qualified.
+> **Sunder Go HLSL Workbench v2.1.0:** The persistent standalone Windows server now supports [verified per-file updates](go-server/README.md) (changed SHA-256 assets only), an uncapped GPU animation mode, 1–2048 framebuffer dimensions within device limits, direct WebGPU preview and persistent compile caching. Download the full Windows installer from [Releases](https://github.com/Cryosimorgh/HLSL-Docs/releases) for a first install; subsequent releases can update managed files in place. Native Windows GPU performance remains hardware dependent.
 
 # HLSL Handbook — High-Level Shader Language, DirectX 12 & GPU Shader Programming
 
