@@ -12,9 +12,9 @@
         timeLabel=$("animation-time"),
         compileLabel=$("animation-compile-ms"),pipelineLabel=$("animation-pipeline-ms"),
         readbackLabel=$("animation-readback-ms"),drawLabel=$("animation-draw-ms"),
-        firstFrameLabel=$("animation-first-frame-ms");
+        firstFrameLabel=$("animation-first-frame-ms"),frameWallLabel=$("animation-frame-ms"),idleLabel=$("animation-idle-ms");
   if(!api||!startButton) return;
-  const maxBytes=4*1024*1024,maxTotal=8*1024*1024;
+  const maxBytes=64*1024*1024,maxTotal=128*1024*1024;
   let current=null,starting=false,serial=0;
   const now=()=>performance.now();
   const setStatus=(s,error=false)=>api.setStatus(s,error);
@@ -36,6 +36,7 @@
     firstFrameLabel.textContent="—";
     readbackLabel.textContent="—";
     drawLabel.textContent="—";
+    frameWallLabel.textContent="—";idleLabel.textContent="—";
   };
   const updateMetrics=(s,frameMs)=>{
     frameLabel.textContent=s.frameCount.toLocaleString();
@@ -48,6 +49,47 @@
     }
     if(s.frameCount===1)fpsLabel.textContent="…";
   };
+  async function buildDirectPreview(device,inspect,spec){
+    // Present the HLSL-written float4 storage buffer directly through WebGPU.
+    // This avoids a full GPU→CPU transfer and per-pixel JS conversion each frame.
+    const rect=spec.resources.find(r=>r.visualize?.mode==="grid-rgba")?.visualize?.grid;
+    if(!rect)return null;
+    const width=rect.width,height=rect.height;
+    const container=document.querySelector(".visual-chart");
+    if(!container)return null;
+    const canvas=document.createElement("canvas");
+    canvas.className="sunder-direct-gpu-preview";
+    canvas.width=width;canvas.height=height;canvas.hidden=true;
+    let context;
+    try{
+      context=canvas.getContext("webgpu");if(!context)return null;
+      const format=navigator.gpu.getPreferredCanvasFormat();
+      context.configure({device,format,alphaMode:"opaque"});
+      const code=`@group(0) @binding(0) var<storage, read> colors: array<vec4<f32>>;
+        @vertex fn vertex(@builtin(vertex_index) index:u32)->@builtin(position) vec4<f32> {
+          let points=array<vec2<f32>,3>(vec2<f32>(-1.0,-1.0),vec2<f32>(3.0,-1.0),vec2<f32>(-1.0,3.0));
+          return vec4<f32>(points[index],0.0,1.0);
+        }
+        @fragment fn fragment(@builtin(position) pixel:vec4<f32>)->@location(0) vec4<f32> {
+          let x=min(u32(pixel.x),${width-1}u);let y=min(u32(pixel.y),${height-1}u);
+          return clamp(colors[y*${width}u+x],vec4<f32>(0.0),vec4<f32>(1.0));
+        }`;
+      const module=device.createShaderModule({code});
+      const pipeline=await device.createRenderPipelineAsync({
+        layout:"auto",vertex:{module,entryPoint:"vertex"},
+        fragment:{module,entryPoint:"fragment",targets:[{format}]},
+        primitive:{topology:"triangle-list"}
+      });
+      const bindGroup=device.createBindGroup({
+        layout:pipeline.getBindGroupLayout(0),entries:[{binding:0,resource:{buffer:inspect.buffer}}]
+      });
+      container.append(canvas);
+      return {canvas,context,pipeline,bindGroup};
+    }catch(e){
+      canvas.remove();console.warn("Direct WebGPU preview unavailable; using GPU readback fallback",e);
+      return null;
+    }
+  }
   function validateAnimation(spec) {
     const a=spec.animation;
     if(!a||typeof a!=="object")throw Error(
@@ -58,12 +100,12 @@
       "Use Compile & Run HLSL for a one-shot buffer shader."
     );
     const binding=a.binding??32,component=a.component??0,
-          speed=a.speed??1,fps=a.fps??30;
+          speed=a.speed??1,fps=Number(document.getElementById("animation-rate")?.value??(a.fps??0));
     if(!Number.isInteger(binding)||binding<0||binding>127||
        !Number.isInteger(component)||component<0||component>1023||
        !Number.isFinite(speed)||Math.abs(speed)>100||
-       ![15,24,30,60].includes(fps))
-      throw Error("Invalid animation binding/component/speed/fps (allowed FPS: 15,24,30,60).");
+       ![0,15,24,30,60,120].includes(fps))
+      throw Error("Invalid animation settings (FPS: Max, 15, 24, 30, 60 or 120).");
     const target=spec.resources.find(r=>r.binding===binding);
     if(!target||target.access!=="uniform"||!Array.isArray(target.data)||
        component>=target.data.length)
@@ -77,6 +119,8 @@
     if(s.readback)try{s.readback.destroy()}catch{}
     for(const a of s.allocations)try{a.buffer.destroy()}catch{}
     try{s.device.destroy()}catch{}
+    s.directPreview?.canvas?.remove();
+    const original=$("gpu-visual");if(original)original.hidden=false;
   }
   function stop(){
     serial++;
@@ -84,7 +128,8 @@
     if(!s){updateUI();return;}
     s.running=false;
     if(s.raf)cancelAnimationFrame(s.raf);
-    s.raf=0;
+    if(s.timer)clearTimeout(s.timer);
+    s.raf=0;s.timer=0;
     s.stopping=true;
     current=null;
     dispose(s);
@@ -129,6 +174,11 @@
     if(!adapter)throw Error("No WebGPU adapter available.");
     if(dispatch.some(n=>n>adapter.limits.maxComputeWorkgroupsPerDimension))
       throw Error("Workgroup dispatch exceeds GPU device limits.");
+    for(const r of spec.resources){
+      const bytes=Number(r.byteLength)||0;
+      if(bytes>adapter.limits.maxStorageBufferBindingSize || bytes>adapter.limits.maxBufferSize)
+        throw Error("Shader output exceeds this GPU adapter's maximum buffer size.");
+    }
     const device=await adapter.requestDevice();
     const allocations=[];
     let readback=null;
@@ -168,16 +218,17 @@
       readback=device.createBuffer({
         size:inspect.length,usage:GPUBufferUsage.COPY_DST|GPUBufferUsage.MAP_READ
       });
+      const directPreview=spec.autoFramebuffer?await buildDirectPreview(device,inspect,spec):null;
       const initialPhase=new DataView(a.initial.buffer,a.initial.byteOffset,a.initial.byteLength)
         .getFloat32(animation.component*4,true);
       const s={
-        device,pipeline,bindGroup,dispatch,allocations,readback,inspect,
+        device,pipeline,bindGroup,dispatch,allocations,readback,inspect,directPreview,
         uniform:a,config:animation,initialPhase,phase:initialPhase,
         source,manifestText,autoFramebuffer:!!spec.autoFramebuffer,frameCount:0,elapsed:0,raf:0,lastTs:0,
         compileMs,pipelineMs:now()-setupStart,cacheHit:!!compiled.cacheHit,
         dxcMs:compiled.dxcMs,nagaMs:compiled.nagaMs,
         readbackMs:0,drawMs:0,
-        running:false,inFlight:false,stopping:false,disposed:false,
+        running:false,inFlight:false,stopping:false,disposed:false,timer:0,
         lastMeasured:0,countSinceMeasured:0
       };
       device.lost.then(info=>{
@@ -200,6 +251,7 @@
     if(s.inFlight||s.disposed||s.stopping)return;
     s.inFlight=true;
     const start=now();
+    const schedulerMs=s.lastDoneAt?start-s.lastDoneAt:0;
     try{
       s.phase+=dt*s.config.speed;
       s.elapsed+=dt;
@@ -219,22 +271,46 @@
       pass.setBindGroup(0,s.bindGroup);
       pass.dispatchWorkgroups(...s.dispatch);
       pass.end();
-      encoder.copyBufferToBuffer(s.inspect.buffer,0,s.readback,0,s.inspect.length);
+      const sampled=!s.directPreview || s.frameCount===0 || now()-s.lastSampleAt>1000;
+      if(s.directPreview){
+        const preview=s.directPreview;
+        const render=encoder.beginRenderPass({colorAttachments:[{
+          view:preview.context.getCurrentTexture().createView(),
+          clearValue:{r:0,g:0,b:0,a:1},loadOp:"clear",storeOp:"store"
+        }]});
+        render.setPipeline(preview.pipeline);
+        render.setBindGroup(0,preview.bindGroup);
+        render.draw(3);render.end();
+      }
+      if(sampled)encoder.copyBufferToBuffer(s.inspect.buffer,0,s.readback,0,s.inspect.length);
       const readbackStart=now();
       s.device.queue.submit([encoder.finish()]);
-      await s.readback.mapAsync(GPUMapMode.READ);
-      // Render directly from the mapped range while it is valid. No 1 MiB
-      // per-frame ArrayBuffer copy; finally unmaps before the next dispatch.
-      const data=s.readback.getMappedRange();
-      if(s.stopping||current!==s)return;
-      s.readbackMs=now()-readbackStart;
-      const drawStart=now();
-      window.HLSLGPUVisualize.render({
-        bytes:data,format:s.inspect.r.display||"f32",
-        binding:s.inspect.r.binding,visualize:s.inspect.r.visualize,
-        source:s.source,worldWidth:api.gridConfig({resources:[]}).xMax
-      });
-      s.drawMs=now()-drawStart;
+      if(sampled){
+        await s.readback.mapAsync(GPUMapMode.READ);
+        const data=s.readback.getMappedRange();
+        if(s.stopping||current!==s)return;
+        s.readbackMs=now()-readbackStart;
+        s.lastSampleAt=now();
+        const drawStart=now();
+        window.HLSLGPUVisualize.render({
+          bytes:data,format:s.inspect.r.display||"f32",
+          binding:s.inspect.r.binding,visualize:s.inspect.r.visualize,
+          source:s.source,worldWidth:api.gridConfig({resources:[]}).xMax
+        });
+        s.drawMs=now()-drawStart;
+        if(s.directPreview){
+          s.directPreview.canvas.hidden=false;
+          $("gpu-visual").hidden=true;
+        }
+        if(s.frameCount===0 || s.frameCount%30===0){
+          api.results.textContent="GPU compute · real WebGPU pixels · frame "+(s.frameCount+1)+
+            "\nOutput "+s.inspect.length+" bytes\nReadback sampled periodically for statistics."+
+            "\n\nFirst results:\n"+api.showBuffer(data,s.inspect.r.display||"f32");
+        }
+      }else{
+        await s.device.queue.onSubmittedWorkDone();
+        if(s.stopping||current!==s)return;
+      }
       s.frameCount++;
       if(s.frameCount===1&&s.startClickMs)
         firstFrameLabel.textContent=(now()-s.startClickMs).toFixed(0)+" ms";
@@ -243,16 +319,13 @@
         drawLabel.textContent=s.drawMs.toFixed(1)+" ms";
       }
       s.countSinceMeasured++;
-      updateMetrics(s,now()-start);
-      // Avoid rebuilding a long textual dump on every animation frame.
-      if(s.frameCount===1||s.frameCount%30===0){
-        api.results.textContent="Continuous GPU compute · frame "+s.frameCount+
-          "\nPhase: "+s.phase.toFixed(4)+
-          "\nDispatch: "+s.dispatch.join(" × ")+
-          "\nGPU buffer: "+s.inspect.length+" bytes"+
-          "\nFrame includes GPU readback; see the live image above."+
-          "\n\nFirst results:\n"+api.showBuffer(data,s.inspect.r.display||"f32");
+      s.lastDoneAt=now();
+      if(s.frameCount===1||s.frameCount%15===0){
+        frameWallLabel.textContent=(s.lastDoneAt-start).toFixed(1)+" ms";
+        idleLabel.textContent=schedulerMs.toFixed(1)+" ms";
       }
+      updateMetrics(s,s.lastDoneAt-start);
+      // The direct canvas presents GPU pixels without mapping full buffers each frame.
       if(s.frameCount===1||s.frameCount%30===0)
         setStatus("Animating · "+s.frameCount+" real WebGPU dispatches completed.");
     }finally{
@@ -263,25 +336,24 @@
     }
   }
   function schedule(s){
-    if(!s.running||s.raf||s.stopping)return;
-    s.raf=requestAnimationFrame(async timestamp=>{
-      s.raf=0;
+    if(!s.running||s.raf||s.timer||s.stopping)return;
+    const next=async timestamp=>{
+      s.raf=0;s.timer=0;
       if(current!==s||!s.running||document.hidden)return;
-      const interval=1000/s.config.fps;
-      if(s.lastTs && timestamp-s.lastTs<interval-1){
-        schedule(s);return;
-      }
-      const dt=s.lastTs?Math.min(Math.max((timestamp-s.lastTs)/1000,0),0.15):1/s.config.fps;
+      const interval=s.config.fps?1000/s.config.fps:0;
+      if(interval && s.lastTs && timestamp-s.lastTs<interval-1){schedule(s);return;}
+      const dt=s.lastTs?Math.min(Math.max((timestamp-s.lastTs)/1000,0),0.15):1/60;
       s.lastTs=timestamp;
       try{await frame(s,dt)}
       catch(e){
-        stop();
-        api.results.textContent=String(e.stack||e);
-        $("debug-output-panel").open=true;
-        setStatus("Animation failed: "+e.message,true);
+        stop();api.results.textContent=String(e.stack||e);
+        $("debug-output-panel").open=true;setStatus("Animation failed: "+e.message,true);
       }
       if(current===s&&s.running)schedule(s);
-    });
+    };
+    // Max mode is completion-driven, not limited to the display refresh rate.
+    if(!s.config.fps)s.timer=setTimeout(()=>{void next(now())},0);
+    else s.raf=requestAnimationFrame(next);
   }
   async function start(){
     if(starting)return;
@@ -324,7 +396,7 @@
       pause();
       // scheduled first frame may not run before pause, so force one.
     }else pause();
-    try{await frame(current,1/current.config.fps)}
+    try{await frame(current,1/(current.config.fps||60))}
     catch(e){stop();setStatus("GPU step failed: "+e.message,true);}
   }
   async function reset(){
@@ -346,6 +418,14 @@
     await frame(s,0);
     setStatus("Animation reset · initial GPU state restored.");
   }
+  $("animation-rate")?.addEventListener("change",()=>{
+    if(!current)return;
+    current.config.fps=Number($("animation-rate").value)||0;
+    if(current.raf)cancelAnimationFrame(current.raf);
+    if(current.timer)clearTimeout(current.timer);
+    current.raf=0;current.timer=0;current.lastTs=0;
+    if(current.running)schedule(current);
+  });
   startButton.addEventListener("click",()=>{void start()});
   pauseButton.addEventListener("click",pause);
   stepButton.addEventListener("click",()=>{void step()});
