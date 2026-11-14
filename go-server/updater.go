@@ -123,7 +123,7 @@ func validateManifest(m updateManifest) error {
 	return nil
 }
 func updateHTTPClient() *http.Client {
-	return &http.Client{Timeout: 45 * time.Second, CheckRedirect: func(r *http.Request, via []*http.Request) error {
+	return &http.Client{Timeout: 3 * time.Minute, CheckRedirect: func(r *http.Request, via []*http.Request) error {
 		if len(via) > 5 || r.URL.Scheme != "https" {
 			return errors.New("unsafe update redirect")
 		}
@@ -424,7 +424,10 @@ func applyUpdateHelper(stage, target string, pid int) error {
 	if !filepath.IsAbs(stage) || !filepath.IsAbs(target) || pid < 1 {
 		return errors.New("invalid staged update arguments")
 	}
-	// Wait until the existing host exits before touching its running executable.
+	// Wait for the old server process to exit, not merely for its TCP port to close.
+	if err := waitForProcessExit(pid, 25*time.Second); err != nil {
+		return err
+	}
 	original := filepath.Join(target, "HLSLWorkbench.exe")
 	for attempt := 0; attempt < 100; attempt++ {
 		if attempt > 0 {
