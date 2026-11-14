@@ -121,7 +121,7 @@ jobs:
           $spv = Join-Path $env:RUNNER_TEMP 'sunder-release-smoke.spv'
           $wgsl = Join-Path $env:RUNNER_TEMP 'sunder-release-smoke.wgsl'
           '[numthreads(8,8,1)] void CSMain(uint3 tid : SV_DispatchThreadID) { }' | Set-Content -LiteralPath $shader -Encoding ascii
-          & 'tools/dxc/dxc.exe' -spirv -fspv-target-env=vulkan1.1 -T cs_6_0 -E CSMain -Fo $spv $shader
+          & 'tools/dxc/dxc.exe' '-spirv' '-fspv-target-env=vulkan1.1' '-T' 'cs_6_0' '-E' 'CSMain' '-Fo' $spv $shader
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $spv)) { throw 'DXC smoke test failed' }
           & 'tools/naga/naga.exe' $spv $wgsl
           if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $wgsl)) { throw 'Naga smoke test failed' }
