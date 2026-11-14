@@ -4,82 +4,80 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="HLSL shader workbench. Edit, compile, execute and inspect real WebGPU compute results.">
-<meta name="theme-color" content="#0d1117">
-<title>HLSL Workbench — Compute Shader Lab</title>
+<meta name="theme-color" content="#0d0b18">
+<title>Sunder HLSL Workbench</title>
+<link rel="icon" type="image/x-icon" href="sunder-mark.svg">
 <link rel="stylesheet" href="vendor/codemirror/codemirror.css">
 <link rel="stylesheet" href="vendor/codemirror/foldgutter.css">
 <link rel="stylesheet" href="vendor/codemirror/show-hint.css">
 <link rel="stylesheet" href="workbench.css">
+<link rel="stylesheet" href="sunder-ide.css">
 </head>
 <body>
 <main class="wrap">
+  <div class="desktop-window-title" aria-hidden="true"><img src="sunder-mark.svg" alt=""><span>Sunder HLSL Workbench</span><span class="desktop-title-detail">GPU shader development</span></div>
   <header class="site-header">
     <div class="brand">
-      <span class="brand-icon" aria-hidden="true">HLSL</span>
-      <div>
-        <div class="brand-title">HLSL Workbench</div>
-        <div class="brand-sub">Compute shader tools</div>
-      </div>
+      <span class="brand-icon" aria-hidden="true"><img src="sunder-mark.svg" alt=""></span>
+      <div class="brand-copy"><span class="brand-title">SUNDER</span><span class="brand-sub">HLSL WORKBENCH</span></div>
     </div>
-    <nav class="header-actions" aria-label="Workspace navigation">
-      <a href="hlsl-reference.html">HLSL reference</a>
-      <a href="README.md">Documentation</a>
-      <button class="quiet-button" id="close-playground" type="button" aria-label="End this playground session and stop the local compiler">End session</button>
+    <nav class="header-actions" aria-label="Workbench navigation">
+      <span class="server-indicator"><span class="status-dot" id="server-dot"></span><span>Server</span><a id="server-url" href="/" title="Persistent local Go server">localhost</a></span>
+      <details class="header-menu" id="workspace-settings"><summary aria-label="Workbench settings" title="Workbench settings">⚙ <span class="small-hidden">Settings</span></summary><div class="header-popover">
+        <strong>Workspace settings</strong>
+        <label class="menu-toggle"><input type="checkbox" id="show-shortcuts" checked> Show shortcut bar</label>
+        <label class="menu-toggle"><input type="checkbox" id="show-wgsl"> Show translated WGSL</label>
+        <a href="hlsl-reference.html">HLSL reference</a>
+        <a href="README.md">Documentation &amp; help</a>
+        <button class="danger-action" id="close-playground" type="button" title="Stops Go server, not just this tab">Stop server</button>
+      </div></details>
+      <a class="header-help" href="hlsl-reference.html" title="HLSL language reference" aria-label="HLSL language reference">?</a>
     </nav>
   </header>
-
-  <section class="hero" aria-labelledby="page-heading">
-    <div>
-      <div class="eyebrow">Compute / Shader Model 6.0</div>
-      <h1 id="page-heading">Compute shader workbench</h1>
-      <p>Edit HLSL, execute on WebGPU, and inspect output buffers.</p>
-    </div>
-    <div class="pipeline" aria-label="Compilation pipeline">
-      <strong>HLSL</strong> &nbsp;→&nbsp; DXC &nbsp;→&nbsp; Naga &nbsp;→&nbsp; <strong>WebGPU</strong>
-    </div>
-  </section>
-
-  <section class="workbench" aria-label="HLSL compute shader workbench">
-    <div class="workbench-bar">
-      <div>
-        <div class="workbench-label">Compute workspace</div>
-        <div class="workbench-meta">cs_6_0 &nbsp;·&nbsp; local compiler &nbsp;·&nbsp; GPU readback</div>
+  <section class="workbench" aria-label="Sunder HLSL IDE">
+    <div class="workbench-bar" role="toolbar" aria-label="File and execution actions">
+      <div class="file-actions">
+        <button id="new-file" type="button" title="New shader (Ctrl+N)"><span class="tool-glyph">＋</span> New</button>
+        <button id="open-file" type="button" title="Open HLSL file (Ctrl+O)"><span class="tool-glyph">▱</span> Open…</button>
+        <input id="desktop-file-picker" type="file" accept=".hlsl,.hlsli" hidden>
+        <button id="save-file" type="button" title="Save shader (Ctrl+S)"><span class="tool-glyph">▣</span> Save</button>
+        <button id="download" type="button" title="Download a copy of the shader (Ctrl+Shift+S)"><span class="tool-glyph">▤</span> Save As…</button>
       </div>
-      <div class="preset-bar" role="group" aria-label="Load a shader example">
-        <span class="preset-label">Load example</span>
-        <button id="example-julia" class="preset-button" type="button" aria-pressed="true">Julia animation</button>
-        <button id="example-circle" class="preset-button" type="button" aria-pressed="false">Circle mask</button>
-        <button id="example-scale" class="preset-button" type="button" aria-pressed="false">Array transform</button>
-        <button id="restore-example" class="preset-button" type="button" aria-pressed="false">GPU particles</button>
+      <div class="run-controls">
+        <button id="run-gpu" class="primary" type="button" title="Compile and run a frame (F5 or Ctrl+Enter)">▶ <span>Compile (F5)</span></button>
+        <button id="animate-gpu" class="minor-button" type="button" title="Start or resume real GPU animation (F6)">▷ <span>Animate (F6)</span></button>
+        <button id="pause-gpu" class="minor-button" type="button" disabled>Ⅱ <span>Pause</span></button>
+        <button id="reset-gpu" class="minor-button" type="button">↻ <span>Reset</span></button>
+        <details id="advanced-actions" class="toolbar-more"><summary title="More shader tools">More ▾</summary><div class="more-menu">
+          <div class="preset-label">EXAMPLES</div>
+          <div class="preset-bar" role="group" aria-label="Load a shader example">
+            <button id="example-julia" class="preset-button" type="button" aria-pressed="true">Julia animation</button>
+            <button id="example-circle" class="preset-button" type="button" aria-pressed="false">Circle mask</button>
+            <button id="example-scale" class="preset-button" type="button" aria-pressed="false">Array transform</button>
+            <button id="restore-example" class="preset-button" type="button" aria-pressed="false">GPU particles</button>
+          </div>
+          <button id="step-gpu" class="minor-button" type="button">Step one frame</button>
+        </div></details>
       </div>
     </div>
-
     <div class="workspace-grid">
       <section class="editor-surface" aria-label="HLSL code editor">
-        <div class="pane-header">
-          <div class="pane-label"><span class="file-mark" aria-hidden="true"></span> shader.hlsl</div>
-          <div class="editor-tools">
-            <button id="copy" type="button">Copy</button>
-            <button id="download" type="button">Save .hlsl</button>
-            <button id="trigger-completion" class="editor-mode-button" type="button" title="Show HLSL completions (Ctrl+Space)">Complete</button>
-            <span class="editor-help-hint">Suggestions while typing · F1 help</span>
+        <div class="pane-header editor-tabbar">
+          <div class="document-tabs" role="tablist" aria-label="Active shader">
+            <div class="document-tab" role="tab" aria-selected="true" tabindex="0"><span class="file-mark" aria-hidden="true">▤</span><span id="desktop-file-label">Untitled shader</span><button id="close-document" type="button" aria-label="Close current shader and create a new document" title="Close shader">×</button></div>
+            <button id="new-document-tab" class="new-tab" type="button" title="New shader (Ctrl+N)" aria-label="New shader">+</button>
+          </div>
+          <details id="editor-actions" class="editor-actions"><summary title="Editor commands">Editor ▾</summary><div class="editor-tools">
+            <button id="copy" type="button">Copy code</button>
+            <button id="trigger-completion" class="editor-mode-button" type="button">Complete (Ctrl+Space)</button>
             <button id="fold-all" class="editor-mode-button" type="button">Fold all</button>
             <button id="unfold-all" class="editor-mode-button" type="button">Unfold all</button>
-          </div>
+          </div></details>
         </div>
         <label class="sr-only" for="code">Editable HLSL compute shader source</label>
         <div class="editor-frame">
           <pre id="code-highlight" class="code-highlight" aria-hidden="true"><code id="code-highlight-content"></code></pre>
           <textarea id="code" class="code-editor" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Editable HLSL compute shader source"></textarea>
-        </div>
-        <div class="editor-shortcuts" aria-label="HLSL editor keyboard and mouse shortcuts">
-          <span><kbd>Ctrl+Space</kbd> Complete</span>
-          <span><kbd>Ctrl+Shift+Space</kbd> Parameters</span>
-          <span><kbd>F1</kbd> Explain</span>
-          <span><kbd>Right-click symbol</kbd> Pin help</span>
-          <span><kbd>Esc</kbd> Close help</span>
-          <span><kbd>Ctrl+Alt+[ / ]</kbd> Fold / Unfold</span>
-          <span><kbd>Ctrl+Enter</kbd> Compile</span>
         </div>
         <details class="bindings-panel">
           <summary>Resource bindings &amp; dispatch <span class="pane-hint">legacy shaders / advanced</span></summary>
@@ -87,32 +85,11 @@
           <label class="sr-only" for="bindings">JSON buffer layout and dispatch</label>
           <textarea id="bindings" spellcheck="false" aria-label="JSON buffer layout and dispatch"></textarea>
         </details>
-        <div class="run-bar">
-          <div class="run-controls">
-            <button id="run-gpu" class="primary" type="button">Compile &amp; Run HLSL</button>
-            <button id="animate-gpu" class="minor-button" type="button">Animate</button>
-            <button id="pause-gpu" class="minor-button" type="button" disabled>Pause</button>
-            <button id="step-gpu" class="minor-button" type="button">Step</button>
-            <button id="reset-gpu" class="minor-button" type="button">Reset</button>
-            <span class="run-hint">Ctrl + Enter</span>
-            <label class="check-wgsl"><input type="checkbox" id="show-wgsl"> Show WGSL</label>
-          </div>
-          <div class="animation-stats" aria-label="Live HLSL GPU animation counters">
-            <span>FPS <strong id="animation-fps">—</strong></span>
-            <span>Frames <strong id="animation-frames">0</strong></span>
-            <span>Elapsed <strong id="animation-time">0.0 s</strong></span>
-            <span>Compile <strong id="animation-compile-ms">—</strong></span>
-            <span>GPU + readback <strong id="animation-readback-ms">—</strong></span>
-            <span>Draw <strong id="animation-draw-ms">—</strong></span>
-          </div>
-          <p id="compile-status" role="status" aria-live="polite">Ready to compile.</p>
-        </div>
       </section>
 
       <section class="preview-surface" aria-label="Shader output and GPU visualization">
-        <div class="pane-header">
-          <div class="pane-label">Output</div>
-          <div class="pane-hint">REAL GPU PIXELS / u0</div>
+        <div class="pane-header preview-tabbar"><div class="pane-label">Preview <span class="pane-hint">REAL GPU OUTPUT</span></div>
+          <div class="preview-topline"><span id="preview-resolution">Shader output</span><span id="preview-live-fps">— FPS</span><button id="preview-expand" type="button" title="Expand or restore preview" aria-pressed="false" aria-label="Expand preview">⛶</button></div>
         </div>
         <div class="preview-stage">
           <div id="gpu-preview-empty" class="preview-empty">
@@ -140,6 +117,19 @@
             <p id="gpu-visual-summary" role="status" aria-live="polite"></p>
           </section>
         </div>
+        <section class="performance-panel" aria-label="Shader performance statistics">
+          <div class="performance-title"><strong>Statistics</strong><span id="performance-overview">No frames yet</span></div>
+          <div class="animation-stats" aria-label="Live HLSL GPU animation counters">
+            <span>FPS <strong id="animation-fps">—</strong></span>
+            <span>Frames <strong id="animation-frames">0</strong></span>
+            <span>Elapsed <strong id="animation-time">0.0 s</strong></span>
+            <span>Compile <strong id="animation-compile-ms">—</strong></span>
+            <span>GPU setup <strong id="animation-pipeline-ms">—</strong></span>
+            <span>First frame <strong id="animation-first-frame-ms">—</strong></span>
+            <span>GPU + readback <strong id="animation-readback-ms">—</strong></span>
+            <span>Draw <strong id="animation-draw-ms">—</strong></span>
+          </div>
+        </section>
         <div class="inspectors">
           <details id="debug-output-panel">
             <summary>Raw buffer &amp; diagnostics</summary>
@@ -152,12 +142,18 @@
         </div>
       </section>
     </div>
-    <div class="workbench-foot">
-      Runs compatible HLSL compute shaders through the local DXC/Naga host. Output is read back from WebGPU.
-      <a href="README.md">Setup &amp; limitations</a>
-    </div>
+    <details class="shortcuts-panel" id="shortcuts-panel" open><summary><span class="shortcuts-symbol">⌨</span> Shortcuts <span class="shortcuts-chevron">⌄</span></summary>
+      <div class="editor-shortcuts" aria-label="HLSL editor keyboard and mouse shortcuts">
+        <span><kbd>F5</kbd> Compile</span><span><kbd>F6</kbd> Animate</span><span><kbd>Ctrl+S</kbd> Save</span>
+        <span><kbd>Ctrl+Space</kbd> Complete</span><span><kbd>Ctrl+Shift+Space</kbd> Signature</span>
+        <span><kbd>F1</kbd> Docs</span><span><kbd>Right-click</kbd> Pin docs</span><span><kbd>Esc</kbd> Close</span>
+        <span><kbd>Ctrl+Alt+[ / ]</kbd> Fold / Unfold</span>
+      </div>
+    </details>
+    <div class="workbench-foot" role="status"><span class="status-message"><span class="status-dot" aria-hidden="true"></span><span id="compile-status" aria-live="polite">Ready to compile.</span></span><span class="runtime-path">HLSL <span>›</span> DXC <span>›</span> WGSL <span>›</span> WebGPU <span class="footer-bolt">ϟ</span></span></div>
   </section>
 
+  <details class="labs-drawer"><summary>Additional labs and advanced examples <span>▾</span></summary>
   <section class="after-workbench" aria-label="Additional shader learning labs">
     <h2>Other labs</h2>
     <p class="section-intro">Optional exercises. These run separately from the HLSL compute workbench.</p>
@@ -218,6 +214,7 @@
   </section>
 
   <footer class="foot">HLSL Workbench · <a href="README.md">Documentation</a> · <a href="https://github.com/Cryosimorgh/HLSL-Docs">Source</a></footer>
+  </details>
 </main>
 
 <script id="shader-source" type="text/plain">
@@ -517,7 +514,7 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
         const blob = new Blob([shaderText()], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = url; link.download = "particle-step.hlsl";
+        link.href = url; link.download = window.HLSLDesktopFiles?.activeFile||"shader.hlsl";
         document.body.appendChild(link); link.click(); link.remove();
         setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
         showMessage("HLSL source saved. Compile it separately with DXC.");
@@ -560,11 +557,7 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
 })();
 </script>
 <aside id="hlsl-help-tooltip" class="hlsl-help-tooltip" role="tooltip" aria-label="HLSL code documentation" hidden>
-  <div class="doc-tooltip-head">
-    <strong id="hlsl-help-title"></strong>
-    <span id="hlsl-help-pin-state">Hover or right-click to pin</span>
-    <button type="button" id="hlsl-help-close" class="hlsl-help-close" aria-label="Close HLSL help">×</button>
-  </div>
+  <div class="doc-tooltip-head"><strong id="hlsl-help-title"></strong><div class="doc-tooltip-controls"><span id="hlsl-help-pin-state">Hover 0.8s or right-click to pin</span><button id="hlsl-help-close" class="hlsl-help-close" type="button" aria-label="Close HLSL documentation">×</button></div></div>
   <p><b>What</b> <span id="hlsl-help-what"></span></p>
   <p><b>Does</b> <span id="hlsl-help-does"></span></p>
   <p><b>Use</b> <span id="hlsl-help-use"></span></p>
@@ -590,5 +583,7 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
 <script src="live-runner.js" defer></script>
 <script src="animation-runner.js" defer></script>
 <script src="browser-gpu.js" defer></script>
+<script src="desktop-files.js" defer></script>
+<script src="sunder-ide.js" defer></script>
 </body>
 </html>

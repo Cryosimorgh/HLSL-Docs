@@ -10,20 +10,20 @@ const finite=n=>Number.isFinite(n);
 const fmt=n=>finite(n)?Number(n.toPrecision(5)).toString():"non-finite";
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
 const hasMaskSource=s=>/\bmask\b/i.test(s)&&/\bsmoothstep\s*\(/i.test(s);
-// Reuse large offscreen image buffers across successive GPU frames.
-const rasters=new Map();
-function rasterFor(w,h,ctx){
-  if(typeof document.createElement!=="function"||typeof ctx.drawImage!=="function")return null;
+const imageWorkspaces=new Map();
+function imageWorkspace(w,h){
   const key=w+"x"+h;
-  if(rasters.has(key))return rasters.get(key);
-  const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+  if(imageWorkspaces.has(key))return imageWorkspaces.get(key);
+  const canvas=document.createElement("canvas");
+  canvas.width=w;canvas.height=h;
   const context=canvas.getContext("2d");
-  const image=context?.createImageData?.(w,h);
-  if(!image)return null;
-  if(rasters.size>=2)rasters.clear();
-  const raster={canvas,context,image};rasters.set(key,raster);
-  return raster;
+  if(!context?.createImageData)return null;
+  const entry={canvas,context,pixels:context.createImageData(w,h),values:new Float32Array(w*h)};
+  imageWorkspaces.set(key,entry);
+  if(imageWorkspaces.size>3)imageWorkspaces.delete(imageWorkspaces.keys().next().value);
+  return entry;
 }
+
 function clear(){
   panel.hidden=true;
   if(empty)empty.hidden=false;
@@ -90,16 +90,11 @@ function drawGrid(ctx, v, count, opts,fractal=false){
   const channel=opts.channel??2;
   const xMax=grid.xMax??1,yMax=grid.yMax??1;
   const m=setup(ctx,fractal?"Julia set":"GPU mask",xMax/yMax);
-  const values=new Float32Array(count);
-  // Fast path: plot 16,384 pixels with ONE drawImage, rather than thousands
-  // of fillRect and CSS string allocations every animation frame.
-  let bitmap=null,image=null,pixelContext=null;
-  if(typeof document.createElement==="function"&&typeof ctx.drawImage==="function"){
-    bitmap=document.createElement("canvas");
-    bitmap.width=gw;bitmap.height=gh;
-    pixelContext=bitmap.getContext("2d");
-    if(pixelContext?.createImageData)image=pixelContext.createImageData(gw,gh);
-  }
+  const workspace=imageWorkspace(gw,gh);
+  const values=workspace?.values||new Float32Array(count);
+  const image=workspace?.pixels||null;
+  const bitmap=workspace?.canvas||null;
+  const pixelContext=workspace?.context||null;
   for(let i=0;i<count;i++){
     const z=v[i*4+channel];
     values[i]=z;
@@ -137,9 +132,11 @@ function drawRGBA(ctx,v,count,opts){
   if(!Number.isInteger(w)||!Number.isInteger(h)||w*h!==count)
     throw Error("HLSL Framebuffer dimensions do not match GPU output byte length.");
   const m=setup(ctx,"HLSL RGBA framebuffer",w/h);
-  const bright=new Float32Array(count);
-  const raster=rasterFor(w,h,ctx);
-  const pixels=raster?.image||null,bitmap=raster?.canvas||null,off=raster?.context||null;
+  const workspace=imageWorkspace(w,h);
+  const bright=workspace?.values||new Float32Array(count);
+  const pixels=workspace?.pixels||null;
+  const bitmap=workspace?.canvas||null;
+  const off=workspace?.context||null;
   for(let i=0;i<count;i++){
     const j=i*4;
     const r=clamp(finite(v[j])?v[j]:0,0,1);

@@ -10,9 +10,9 @@
         stepButton=$("step-gpu"),resetButton=$("reset-gpu");
   const fpsLabel=$("animation-fps"),frameLabel=$("animation-frames"),
         timeLabel=$("animation-time"),
-        compileLabel=$("animation-compile-ms"),
-        readbackLabel=$("animation-readback-ms"),
-        drawLabel=$("animation-draw-ms");
+        compileLabel=$("animation-compile-ms"),pipelineLabel=$("animation-pipeline-ms"),
+        readbackLabel=$("animation-readback-ms"),drawLabel=$("animation-draw-ms"),
+        firstFrameLabel=$("animation-first-frame-ms");
   if(!api||!startButton) return;
   const maxBytes=4*1024*1024,maxTotal=8*1024*1024;
   let current=null,starting=false,serial=0;
@@ -32,6 +32,8 @@
     frameLabel.textContent="0";
     timeLabel.textContent="0.0 s";
     compileLabel.textContent="—";
+    pipelineLabel.textContent="—";
+    firstFrameLabel.textContent="—";
     readbackLabel.textContent="—";
     drawLabel.textContent="—";
   };
@@ -101,14 +103,14 @@
     if(!api.isBridgeOrigin)throw Error("Launch the Windows client and use its localhost tab to animate HLSL.");
     if(!navigator.gpu)throw Error("WebGPU is not available in this browser.");
     const spec=api.parseManifest(),source=api.editor.value,manifestText=api.manifestArea.value;
-    const compileStart=now();
     const animation=validateAnimation(spec);
     if(!source||source.length>65536)throw Error("Invalid HLSL source length.");
+    const compileStart=now();
     const compiled=await api.compileForWebGPU(source,spec.entry);
-    const compileWallMs=now()-compileStart;
+    const compileMs=now()-compileStart;
     const wgsl=compiled.wgsl;
-    setStatus("DXC/Naga "+(compiled.cacheHit?"cache hit":"compiled")+
-      " in "+compileWallMs.toFixed(0)+" ms. Creating GPU pipeline…");
+    setStatus("HLSL "+(compiled.cacheHit?"cache hit":"compiled")+" in "+
+      compileMs.toFixed(0)+" ms. Creating GPU pipeline…");
     api.wgslArea.textContent=wgsl;
     const entry=api.compiledEntry(wgsl),size=api.compiledSize(wgsl);
     const g=api.gridConfig(spec);
@@ -122,12 +124,12 @@
       spec.dispatch;
     if(dispatch.some(n=>!Number.isInteger(n)||n<1||n>1024))
       throw Error("Invalid dispatch size for animation.");
+    const setupStart=now();
     const adapter=await navigator.gpu.requestAdapter();
     if(!adapter)throw Error("No WebGPU adapter available.");
     if(dispatch.some(n=>n>adapter.limits.maxComputeWorkgroupsPerDimension))
       throw Error("Workgroup dispatch exceeds GPU device limits.");
     const device=await adapter.requestDevice();
-    const pipelineStart=now();
     const allocations=[];
     let readback=null;
     try {
@@ -172,8 +174,9 @@
         device,pipeline,bindGroup,dispatch,allocations,readback,inspect,
         uniform:a,config:animation,initialPhase,phase:initialPhase,
         source,manifestText,autoFramebuffer:!!spec.autoFramebuffer,frameCount:0,elapsed:0,raf:0,lastTs:0,
-        compileMs:compileWallMs,pipelineMs:now()-pipelineStart,
-        readbackMs:0,drawMs:0,cacheHit:!!compiled.cacheHit,
+        compileMs,pipelineMs:now()-setupStart,cacheHit:!!compiled.cacheHit,
+        dxcMs:compiled.dxcMs,nagaMs:compiled.nagaMs,
+        readbackMs:0,drawMs:0,
         running:false,inFlight:false,stopping:false,disposed:false,
         lastMeasured:0,countSinceMeasured:0
       };
@@ -220,8 +223,9 @@
       const readbackStart=now();
       s.device.queue.submit([encoder.finish()]);
       await s.readback.mapAsync(GPUMapMode.READ);
-      const data=s.readback.getMappedRange().slice(0);
-      s.readback.unmap();
+      // Render directly from the mapped range while it is valid. No 1 MiB
+      // per-frame ArrayBuffer copy; finally unmaps before the next dispatch.
+      const data=s.readback.getMappedRange();
       if(s.stopping||current!==s)return;
       s.readbackMs=now()-readbackStart;
       const drawStart=now();
@@ -232,11 +236,13 @@
       });
       s.drawMs=now()-drawStart;
       s.frameCount++;
-      s.countSinceMeasured++;
+      if(s.frameCount===1&&s.startClickMs)
+        firstFrameLabel.textContent=(now()-s.startClickMs).toFixed(0)+" ms";
       if(s.frameCount===1||s.frameCount%15===0){
         readbackLabel.textContent=s.readbackMs.toFixed(1)+" ms";
         drawLabel.textContent=s.drawMs.toFixed(1)+" ms";
       }
+      s.countSinceMeasured++;
       updateMetrics(s,now()-start);
       // Avoid rebuilding a long textual dump on every animation frame.
       if(s.frameCount===1||s.frameCount%30===0){
@@ -250,6 +256,8 @@
       if(s.frameCount===1||s.frameCount%30===0)
         setStatus("Animating · "+s.frameCount+" real WebGPU dispatches completed.");
     }finally{
+      // A buffer must be unmapped before it can be the target of another copy.
+      if(s.readback.mapState==="mapped")s.readback.unmap();
       s.inFlight=false;
       if(s.stopping)dispose(s);
     }
@@ -263,8 +271,7 @@
       if(s.lastTs && timestamp-s.lastTs<interval-1){
         schedule(s);return;
       }
-      // Preserve real elapsed time if GPU readback is slower than target FPS.
-      const dt=s.lastTs?Math.min(Math.max((timestamp-s.lastTs)/1000,0),1):1/s.config.fps;
+      const dt=s.lastTs?Math.min(Math.max((timestamp-s.lastTs)/1000,0),0.15):1/s.config.fps;
       s.lastTs=timestamp;
       try{await frame(s,dt)}
       catch(e){
@@ -286,17 +293,19 @@
       return;
     }
     const ticket=++serial;
+    const startClickMs=now();
     starting=true;updateUI();
     setStatus("Compiling HLSL once for continuous GPU animation…");
     try {
       const session=await prepare();
       if(ticket!==serial){session.stopping=true;dispose(session);return;}
       current=session;
+      session.startClickMs=startClickMs;
       resetMetrics();
       compileLabel.textContent=session.compileMs.toFixed(0)+" ms"+(session.cacheHit?" (cached)":"");
-      setStatus("HLSL "+(session.cacheHit?"reused":"compiled")+" in "+
-        session.compileMs.toFixed(0)+" ms; GPU pipeline "+
-        session.pipelineMs.toFixed(0)+" ms. Dispatching…");
+      pipelineLabel.textContent=session.pipelineMs.toFixed(0)+" ms";
+      compileLabel.title=session.cacheHit?"Cached compiler output":
+        "DXC "+session.dxcMs+" ms; Naga "+session.nagaMs+" ms";
       current.running=true;
       schedule(current);
       setStatus("Running · shader compiled once; time uniform updates every GPU frame.");
@@ -349,8 +358,8 @@
   // Source file is the authority for dimensions, GPU color, and time usage.
   // No animation resource JSON is required or accepted in this mode.
   const builtins={
-    julia:"// Pure HLSL animated Julia fractal with its OWN RGB colors.\n// The Workbench auto-detects Framebuffer:u0, WorkbenchFrame:b7 and defines.\n// No animation manifest or input-position buffer is required.\n#define WORKBENCH_WIDTH 256\n#define WORKBENCH_HEIGHT 256\ncbuffer WorkbenchFrame : register(b7)\n{\n    float Time;\n    float DeltaTime;\n    float Width;\n    float Height;\n    float Frame;\n    float Padding0;\n    float Padding1;\n    float Padding2;\n};\nRWStructuredBuffer<float4> Framebuffer : register(u0);\n\nfloat3 FractalColor(float t)\n{\n    float3 a = float3(0.02f, 0.04f, 0.10f);\n    float3 b = float3(0.04f, 0.45f, 0.68f);\n    float3 c = float3(1.00f, 0.55f, 0.20f);\n    float3 d = float3(1.00f, 0.90f, 0.62f);\n    float3 lower = lerp(a, b, smoothstep(0.0f, 0.4f, t));\n    float3 upper = lerp(c, d, smoothstep(0.55f, 1.0f, t));\n    return lerp(lower, upper, smoothstep(0.35f, 0.75f, t));\n}\n\n[numthreads(8, 8, 1)]\nvoid CSMain(uint3 tid : SV_DispatchThreadID)\n{\n    if (tid.x >= WORKBENCH_WIDTH || tid.y >= WORKBENCH_HEIGHT) return;\n    uint i = tid.y * WORKBENCH_WIDTH + tid.x;\n    float2 uv = (float2(tid.xy) + 0.5f) /\n                float2(WORKBENCH_WIDTH, WORKBENCH_HEIGHT);\n\n    float2 z = (uv - 0.5f) * 3.1f;\n    float2 c = float2(-0.745f + 0.18f * cos(Time * 0.32f),\n                       0.186f + 0.14f * sin(Time * 0.23f));\n    uint n = 0u;\n    float m2 = 0.0f;\n    [loop]\n    for (uint k = 0u; k < 110u; ++k)\n    {\n        m2 = dot(z, z);\n        if (m2 > 256.0f) break;\n        z = float2(z.x*z.x - z.y*z.y, 2.0f*z.x*z.y) + c;\n        ++n;\n    }\n    float escaped = (float)n / 110.0f;\n    float3 rgb = FractalColor(saturate(pow(escaped, 0.55f)));\n    if (n == 110u) rgb = float3(0.008f, 0.014f, 0.026f);\n    Framebuffer[i] = float4(saturate(rgb), 1.0f);\n}\n",
-    particles:"// Pure HLSL GPU-rendered moving particles.\n// Each pixel receives its RGB color from this shader, NOT from JavaScript.\n// Particles follow independent triangular-wave bouncing trajectories.\n// This is a procedural visual demo, not an inter-particle collision solver.\n#define WORKBENCH_WIDTH 256\n#define WORKBENCH_HEIGHT 256\ncbuffer WorkbenchFrame : register(b7)\n{\n    float Time;\n    float DeltaTime;\n    float Width;\n    float Height;\n    float Frame;\n    float Padding0;\n    float Padding1;\n    float Padding2;\n};\nRWStructuredBuffer<float4> Framebuffer : register(u0);\n\nfloat Hash(float x)\n{\n    uint u = asuint(x);\n    u ^= u >> 16u;\n    u *= 0x7feb352du;\n    u ^= u >> 15u;\n    u *= 0x846ca68bu;\n    u ^= u >> 16u;\n    return float(u & 0x00ffffffu) / 16777215.0f;\n}\nfloat2 Bounce(float2 v) { return 1.0f - abs(frac(v) * 2.0f - 1.0f); }\n\n[numthreads(8, 8, 1)]\nvoid CSMain(uint3 tid : SV_DispatchThreadID)\n{\n    if (tid.x >= WORKBENCH_WIDTH || tid.y >= WORKBENCH_HEIGHT) return;\n    uint i = tid.y * WORKBENCH_WIDTH + tid.x;\n    float2 uv = (float2(tid.xy) + 0.5f) /\n                float2(WORKBENCH_WIDTH, WORKBENCH_HEIGHT);\n\n    float3 rgb = float3(0.009f, 0.016f, 0.028f);\n    float2 coord = uv;\n    for (uint p = 0u; p < 24u; ++p)\n    {\n        float k = float(p) + 1.0f;\n        float2 start = float2(Hash(k * 1.3f), Hash(k * 2.1f));\n        float2 velocity = float2(0.08f + 0.10f*Hash(k*3.7f),\n                                  0.07f + 0.11f*Hash(k*4.3f));\n        float2 pos = 0.08f + 0.84f *\n          Bounce(start + Time * velocity * float2(1.0f, 1.2f));\n        float2 diff = coord - pos;\n        float d2 = dot(diff, diff);\n        float radius = 0.010f + 0.009f * Hash(k*5.3f);\n        float core = 1.0f - smoothstep(radius*radius*0.36f, radius*radius, d2);\n        float halo = (1.0f - smoothstep(radius*radius, radius*radius*9.0f, d2)) * 0.22f;\n        float3 particle = float3(\n            0.30f + 0.70f*Hash(k*6.7f),\n            0.35f + 0.65f*Hash(k*7.7f),\n            0.42f + 0.58f*Hash(k*8.7f)\n        );\n        rgb += particle * (core + halo);\n    }\n    Framebuffer[i] = float4(saturate(rgb), 1.0f);\n}\n"
+    julia:"// Pure HLSL animated Julia fractal with its OWN RGB colors.\n// The Workbench auto-detects Framebuffer:u0, WorkbenchFrame:b7 and defines.\n// No animation manifest or input-position buffer is required.\n#define WORKBENCH_WIDTH 192\n#define WORKBENCH_HEIGHT 192\ncbuffer WorkbenchFrame : register(b7)\n{\n    float Time;\n    float DeltaTime;\n    float Width;\n    float Height;\n    float Frame;\n    float Padding0;\n    float Padding1;\n    float Padding2;\n};\nRWStructuredBuffer<float4> Framebuffer : register(u0);\n\nfloat3 FractalColor(float t)\n{\n    float3 a = float3(0.02f, 0.04f, 0.10f);\n    float3 b = float3(0.04f, 0.45f, 0.68f);\n    float3 c = float3(1.00f, 0.55f, 0.20f);\n    float3 d = float3(1.00f, 0.90f, 0.62f);\n    float3 lower = lerp(a, b, smoothstep(0.0f, 0.4f, t));\n    float3 upper = lerp(c, d, smoothstep(0.55f, 1.0f, t));\n    return lerp(lower, upper, smoothstep(0.35f, 0.75f, t));\n}\n\n[numthreads(8, 8, 1)]\nvoid CSMain(uint3 tid : SV_DispatchThreadID)\n{\n    if (tid.x >= WORKBENCH_WIDTH || tid.y >= WORKBENCH_HEIGHT) return;\n    uint i = tid.y * WORKBENCH_WIDTH + tid.x;\n    float2 uv = (float2(tid.xy) + 0.5f) /\n                float2(WORKBENCH_WIDTH, WORKBENCH_HEIGHT);\n\n    float2 z = (uv - 0.5f) * 3.1f;\n    float2 c = float2(-0.745f + 0.18f * cos(Time * 0.32f),\n                       0.186f + 0.14f * sin(Time * 0.23f));\n    uint n = 0u;\n    float m2 = 0.0f;\n    [loop]\n    for (uint k = 0u; k < 90u; ++k)\n    {\n        m2 = dot(z, z);\n        if (m2 > 256.0f) break;\n        z = float2(z.x*z.x - z.y*z.y, 2.0f*z.x*z.y) + c;\n        ++n;\n    }\n    float escaped = (float)n / 90.0f;\n    float3 rgb = FractalColor(saturate(pow(escaped, 0.55f)));\n    if (n == 90u) rgb = float3(0.008f, 0.014f, 0.026f);\n    Framebuffer[i] = float4(saturate(rgb), 1.0f);\n}\n",
+    particles:"// Pure HLSL GPU-rendered moving particles.\n// Each pixel receives its RGB color from this shader, NOT from JavaScript.\n// Particles follow independent triangular-wave bouncing trajectories.\n// This is a procedural visual demo, not an inter-particle collision solver.\n#define WORKBENCH_WIDTH 192\n#define WORKBENCH_HEIGHT 192\ncbuffer WorkbenchFrame : register(b7)\n{\n    float Time;\n    float DeltaTime;\n    float Width;\n    float Height;\n    float Frame;\n    float Padding0;\n    float Padding1;\n    float Padding2;\n};\nRWStructuredBuffer<float4> Framebuffer : register(u0);\n\nfloat Hash(float x)\n{\n    uint u = asuint(x);\n    u ^= u >> 16u;\n    u *= 0x7feb352du;\n    u ^= u >> 15u;\n    u *= 0x846ca68bu;\n    u ^= u >> 16u;\n    return float(u & 0x00ffffffu) / 16777215.0f;\n}\nfloat2 Bounce(float2 v) { return 1.0f - abs(frac(v) * 2.0f - 1.0f); }\n\n[numthreads(8, 8, 1)]\nvoid CSMain(uint3 tid : SV_DispatchThreadID)\n{\n    if (tid.x >= WORKBENCH_WIDTH || tid.y >= WORKBENCH_HEIGHT) return;\n    uint i = tid.y * WORKBENCH_WIDTH + tid.x;\n    float2 uv = (float2(tid.xy) + 0.5f) /\n                float2(WORKBENCH_WIDTH, WORKBENCH_HEIGHT);\n\n    float3 rgb = float3(0.009f, 0.016f, 0.028f);\n    float2 coord = uv;\n    for (uint p = 0u; p < 24u; ++p)\n    {\n        float k = float(p) + 1.0f;\n        float2 start = float2(Hash(k * 1.3f), Hash(k * 2.1f));\n        float2 velocity = float2(0.08f + 0.10f*Hash(k*3.7f),\n                                  0.07f + 0.11f*Hash(k*4.3f));\n        float2 pos = 0.08f + 0.84f *\n          Bounce(start + Time * velocity * float2(1.0f, 1.2f));\n        float2 diff = coord - pos;\n        float d2 = dot(diff, diff);\n        float radius = 0.010f + 0.009f * Hash(k*5.3f);\n        float core = 1.0f - smoothstep(radius*radius*0.36f, radius*radius, d2);\n        float halo = (1.0f - smoothstep(radius*radius, radius*radius*9.0f, d2)) * 0.22f;\n        float3 particle = float3(\n            0.30f + 0.70f*Hash(k*6.7f),\n            0.35f + 0.65f*Hash(k*7.7f),\n            0.42f + 0.58f*Hash(k*8.7f)\n        );\n        rgb += particle * (core + halo);\n    }\n    Framebuffer[i] = float4(saturate(rgb), 1.0f);\n}\n"
   };
   function loadBuiltin(which){
     stop();
