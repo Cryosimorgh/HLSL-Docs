@@ -27,9 +27,19 @@
         <strong>Workspace settings</strong>
         <label class="menu-toggle"><input type="checkbox" id="show-shortcuts" checked> Show shortcut bar</label>
         <label class="menu-toggle"><input type="checkbox" id="show-wgsl"> Show translated WGSL</label>
+        <label class="menu-toggle">Compiler mode <select id="compiler-optimization" title="Fast edit: DXC -O1; Optimized: DXC -O3"><option value="fast" selected>Fast edit (-O1)</option><option value="optimized">Optimized (-O3)</option></select></label>
         <a href="hlsl-reference.html">HLSL reference</a>
         <a href="README.md">Documentation &amp; help</a>
         <button class="danger-action" id="close-playground" type="button" title="Stops Go server, not just this tab">Stop server</button>
+      </div></details>
+      <details class="header-menu" id="update-menu"><summary aria-label="Check for application updates" title="Download changed files only">↻ <span class="small-hidden">Updates</span><span id="update-alert" hidden> •</span></summary><div class="header-popover update-popover">
+        <strong>Application updates</strong>
+        <span id="update-status" role="status" aria-live="polite">Checking release information…</span>
+        <label class="menu-toggle"><input id="auto-download-updates" type="checkbox" checked> Automatically download changed files</label>
+        <button id="check-updates" type="button">Check for updates</button>
+        <button id="download-update" type="button" hidden>Download changed files</button>
+        <button id="install-update" type="button" hidden>Restart and install update</button>
+        <small>Only verified changed app files are downloaded. Your personal HLSL files are never modified. Installing requires confirmation.</small>
       </div></details>
       <a class="header-help" href="hlsl-reference.html" title="HLSL language reference" aria-label="HLSL language reference">?</a>
     </nav>
@@ -45,6 +55,12 @@
       </div>
       <div class="run-controls">
         <button id="run-gpu" class="primary" type="button" title="Compile and run a frame (F5 or Ctrl+Enter)">▶ <span>Compile (F5)</span></button>
+        <label class="resolution-control" title="Adjust the WORKBENCH_WIDTH/HEIGHT defines; recompiles shader source on next run">Size
+          <input id="shader-width" aria-label="Framebuffer width" type="number" min="1" max="2048" step="1" value="192">×<input id="shader-height" aria-label="Framebuffer height" type="number" min="1" max="2048" step="1" value="192"><button id="apply-resolution" type="button" title="Apply dimensions to HLSL defines">Apply</button>
+        </label>
+        <label class="animation-rate-control" title="Maximum runs as fast as each real GPU frame completes">FPS
+          <select id="animation-rate" aria-label="GPU animation target FPS"><option value="0" selected>Max</option><option value="15">15</option><option value="24">24</option><option value="30">30</option><option value="60">60</option><option value="120">120</option></select>
+        </label>
         <button id="animate-gpu" class="minor-button" type="button" title="Start or resume real GPU animation (F6)">▷ <span>Animate (F6)</span></button>
         <button id="pause-gpu" class="minor-button" type="button" disabled>Ⅱ <span>Pause</span></button>
         <button id="reset-gpu" class="minor-button" type="button">↻ <span>Reset</span></button>
@@ -126,7 +142,9 @@
             <span>Compile <strong id="animation-compile-ms">—</strong></span>
             <span>GPU setup <strong id="animation-pipeline-ms">—</strong></span>
             <span>First frame <strong id="animation-first-frame-ms">—</strong></span>
-            <span>GPU + readback <strong id="animation-readback-ms">—</strong></span>
+            <span>GPU wait / sample <strong id="animation-readback-ms">—</strong></span>
+            <span>Frame wall <strong id="animation-frame-ms">—</strong></span>
+            <span>Scheduling wait <strong id="animation-idle-ms">—</strong></span>
             <span>Draw <strong id="animation-draw-ms">—</strong></span>
           </div>
         </section>
@@ -585,5 +603,6 @@ void CSMain(uint3 tid : SV_DispatchThreadID)
 <script src="browser-gpu.js" defer></script>
 <script src="desktop-files.js" defer></script>
 <script src="sunder-ide.js" defer></script>
+<script src="sunder-updates.js" defer></script>
 </body>
 </html>

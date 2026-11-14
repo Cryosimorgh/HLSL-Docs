@@ -154,6 +154,12 @@ printf '@compute @workgroup_size(8,8,1) fn main() {}' > "$2"
 	if err != nil || !got.CacheHit {
 		t.Fatal("cache miss", err, got)
 	}
+	// A new Go host process must hit the per-user disk cache as well.
+	fresh := &application{root: a.root, cache: map[string]compilation{}}
+	got, err = fresh.compile(context.Background(), req)
+	if err != nil || !got.CacheHit {
+		t.Fatal("persistent compiler cache miss", err, got)
+	}
 	for _, text := range []string{"#include <evil.hlsl>\nvoid CSMain() {}", "//x\n#import \"x\""} {
 		if _, err := a.compile(context.Background(), compileRequest{Source: text, Entry: "CSMain"}); err == nil {
 			t.Fatal("included source accepted")

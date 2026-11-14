@@ -5,7 +5,7 @@
 const $ = id => document.getElementById(id);
 const editor = $("code"), manifestArea = $("bindings"), status = $("compile-status"),
       results = $("gpu-output"), wgslArea = $("generated-wgsl"), runButton = $("run-gpu");
-const maxBytes = 4*1024*1024, maxTotal = 8*1024*1024, maxGroups = 1024;
+const maxBytes = 64*1024*1024, maxTotal = 128*1024*1024, maxGroups = 1024;
 const isBridgeOrigin = /^http:\/\/127\.0\.0\.1:\d+$/.test(location.origin);
 
 // The browser is intentionally unable to launch or kill OS processes.
@@ -56,45 +56,17 @@ function sendCloseBeacon() {
   leaseToken = null;
 }
 async function closePlayground() {
-  // The Go edition deliberately outlives tabs. Only explicit Stop server
-  // should shut it down; leave the legacy PowerShell session flow intact.
-  if (isBridgeOrigin) {
-    try {
-      const healthResponse = await fetch("/api/health", {cache:"no-store"});
-      const health = healthResponse.ok ? await healthResponse.json() : null;
-      if (health?.backend === "go") {
-        if (!confirm("Stop the persistent Sunder HLSL Go server? Closing this browser tab alone keeps it running.")) return;
-        const button = $("close-playground");
-        button.disabled = true;
-        try {
-          const response = await fetch("/api/server/stop", {
-            method:"POST",headers:{"Content-Type":"application/json"},body:"{}"
-          });
-          if (!response.ok) throw Error("HTTP " + response.status);
-          setStatus("Go server stopped. Run Start-HLSL-Workbench.cmd to restart.");
-        } catch (error) {
-          button.disabled=false;setStatus("Unable to stop server: "+error.message,true);
-        }
-        return;
-      }
-    } catch { /* Continue through the legacy session shutdown path. */ }
-  }
-  $("close-playground").disabled = true;
-  if (!leaseClosed && leaseToken && isBridgeOrigin) {
-    const token = leaseToken;
-    leaseClosed = true;
+  if (!confirm("Stop the persistent HLSL Go server? Closing this browser tab alone does NOT stop it.")) return;
+  const button=$("close-playground");
+  button.disabled=true;
+  try {
+    const response=await fetch("/api/server/stop", {method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+    if (!response.ok) throw Error("HTTP "+response.status);
+    setStatus("Persistent server stopped. Use Start-HLSL-Workbench.cmd to start it again.");
     if (heartbeatTimer) clearInterval(heartbeatTimer);
-    heartbeatTimer = null; leaseToken = null;
-    try { await sessionCall("close", token, true); }
-    catch { /* lease expires if the browser has already disconnected */ }
-  } else {
-    sendCloseBeacon();
-  }
-  setStatus("Session closed. The local compiler stops when all tabs are gone.");
-  // Scripts cannot force-close a tab opened by another application. Navigate
-  // away so this page no longer owns a lease, without killing the browser.
-  location.replace("about:blank");
+  } catch (e) {button.disabled=false;setStatus("Unable to stop server: "+e.message,true);}
 }
+
 window.addEventListener("pagehide",()=>{window.HLSLAnimation?.stop();sendCloseBeacon();});
 window.addEventListener("visibilitychange", () => {
   if (!document.hidden && isBridgeOrigin && !leaseClosed && !leaseToken) void openLease();
@@ -127,12 +99,12 @@ function inferFramebufferSpec(source) {
     return match?Number(match[1]):NaN;
   };
   const width=read("WORKBENCH_WIDTH"),height=read("WORKBENCH_HEIGHT");
-  if(!Number.isInteger(width)||!Number.isInteger(height)||width<32||height<32||
-      width>512||height>512||width*height*16>4*1024*1024)
-    throw Error("Framebuffer HLSL needs #define WORKBENCH_WIDTH and HEIGHT (32..512, max 4 MiB).");
+  if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||
+      width>2048||height>2048||width*height*16>maxBytes)
+    throw Error("Framebuffer dimensions must be 1..2048 each, max 64 MiB of float4 pixels. Larger images require more GPU storage and readback memory.");
   return {
     entry:"CSMain",dispatch:"auto",autoFramebuffer:true,
-    animation:{binding:39,component:0,speed:1,fps:30},
+    animation:{binding:39,component:0,speed:1,fps:0}, // 0 = as fast as GPU/browser can complete
     resources:[
       {binding:16,access:"read_write",byteLength:width*height*16,inspect:true,
         display:"vec4",visualize:{mode:"grid-rgba",grid:{width,height,xMax:width,yMax:height},channel:2}},
@@ -258,37 +230,27 @@ function compiledSize(wgsl) {
   if(!m)throw Error("Cannot determine compiled @workgroup_size.");
   return [Number(m[1]),Number(m[2]||1),Number(m[3]||1)];
 }
-// A compiler response may be truncated by the localhost PowerShell socket.
-// Retry a failed transfer (not a DXC/Naga diagnostic); the backend caches
-// successful unchanged shaders, so retry normally skips both compiler tools.
+// A bounded browser cache also avoids HTTP transport and JSON parsing on repeat.
+const compiledCache=new Map();
 async function compileForWebGPU(source,entry){
-  let lastError;
-  for(let attempt=0;attempt<3;attempt++){
-    try{
-      const response=await fetch("/api/compile",{
-        method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({source,entry}),signal:AbortSignal.timeout(35000)
-      });
-      const result=await response.json();
-      if(!response.ok){
-        const diagnostic=new Error(result.error||"Compilation failed.");
-        diagnostic.compilerDiagnostic=true;
-        throw diagnostic;
-      }
-      if(typeof result.wgsl!=="string"||!result.wgsl.includes("@compute"))
-        throw Error("Compiler returned incomplete WGSL");
-      return result;
-    }catch(error){
-      if(error.compilerDiagnostic||error.name==="AbortError"||
-         error.name==="TimeoutError")throw error;
-      lastError=error;
-      if(attempt===2)break;
-      setStatus("Compiler response was interrupted; retrying ("+(attempt+1)+"/2)…");
-      await new Promise(resolve=>setTimeout(resolve,150*(attempt+1)));
-    }
+  const mode=document.getElementById("compiler-optimization")?.value||"fast";
+  const key=mode+"\0"+entry+"\0"+source;
+  if(compiledCache.has(key)){
+    const saved=compiledCache.get(key);
+    compiledCache.delete(key);compiledCache.set(key,saved);
+    return {...saved,cacheHit:true,cacheLayer:"browser"};
   }
-  throw Error("Unable to receive compiler output after retries: "+
-    (lastError?.message||String(lastError)));
+  const response=await fetch("/api/compile",{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({source,entry,mode}),signal:AbortSignal.timeout(35000)
+  });
+  const result=await response.json();
+  if(!response.ok)throw Error(result.error||"Compilation failed.");
+  if(typeof result.wgsl!=="string"||!result.wgsl.includes("@compute"))
+    throw Error("Compiler returned invalid WGSL.");
+  compiledCache.set(key,result);
+  if(compiledCache.size>4)compiledCache.delete(compiledCache.keys().next().value);
+  return result;
 }
 async function run(){
   if(!isBridgeOrigin)throw Error("This tab is offline. Run Start-HLSL-Playground.cmd from the new Windows portable package or an updated checkout and use the new localhost tab.");
@@ -298,7 +260,10 @@ async function run(){
   setStatus("Compiling · DXC → Naga → WebGPU…");
   results.textContent="";wgslArea.textContent="";
   window.HLSLGPUVisualize.clear();
+  const compileStart=performance.now();
   const result=await compileForWebGPU(source,spec.entry);
+  const compileWallMs=performance.now()-compileStart;
+  setStatus((result.cacheHit?"Cached":"Compiled")+" HLSL in "+compileWallMs.toFixed(0)+" ms; preparing GPU…");
   const wgsl=result.wgsl;
   wgslArea.textContent=wgsl;
   const entry=compiledEntry(wgsl),size=compiledSize(wgsl);
@@ -314,7 +279,10 @@ async function run(){
   if(!adapter)throw Error("No WebGPU adapter available.");
   if(dispatch.some((x,i)=>x>adapter.limits.maxComputeWorkgroupsPerDimension))
     throw Error("Dispatch exceeds device workgroup limits.");
+  if(spec.resources.some(r=>r.byteLength && Number(r.byteLength)>adapter.limits.maxStorageBufferBindingSize))
+    throw Error("Framebuffer exceeds this adapter's maximum storage binding size ("+adapter.limits.maxStorageBufferBindingSize+" bytes).");
   const device=await adapter.requestDevice();
+  const pipelineStart=performance.now();
   device.addEventListener("uncapturederror",e=>setStatus("WebGPU: "+e.error.message,true));
   const allocations=[],readbacks=[];
   try {
@@ -349,6 +317,7 @@ async function run(){
       encoder.copyBufferToBuffer(a.buffer,0,mapped,0,a.length);
     }
     device.queue.submit([encoder.finish()]);
+    const gpuStart=performance.now();
     await device.queue.onSubmittedWorkDone();
     const lines=["GPU compute dispatch completed.","Path: HLSL → DXC SPIR-V → Naga WGSL → WebGPU",
       "Entry: "+entry+"; threads/group: "+size.join("×")+"; groups: "+dispatch.join("×")];
@@ -377,10 +346,15 @@ async function run(){
         lines.push("Mask output was NOT applied as particle velocity; see GPU result visualization.");
       }
     }
+    const drawStart=performance.now();
     if(preview)window.HLSLGPUVisualize.render(preview);
+    const drawMs=performance.now()-drawStart;
     results.textContent=lines.join("\n");
     $("debug-output-panel").open=false;
-    setStatus("Completed · GPU output ready for inspection.");
+    setStatus("Completed · compile "+compileWallMs.toFixed(0)+" ms"+
+      (result.cacheHit?" (cached)":"")+", pipeline "+
+      (gpuStart-pipelineStart).toFixed(0)+" ms, GPU + readback "+
+      (performance.now()-gpuStart-drawMs).toFixed(0)+" ms, draw "+drawMs.toFixed(0)+" ms.");
   }finally{
     for(const r of readbacks)r.mapped.destroy();
     for(const a of allocations)a.buffer.destroy();

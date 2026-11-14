@@ -48,6 +48,7 @@ type compilation struct {
 type compileRequest struct {
 	Source string `json:"source"`
 	Entry  string `json:"entry"`
+	Mode   string `json:"mode,omitempty"`
 }
 type document struct {
 	ID       string `json:"id"`
@@ -70,6 +71,7 @@ type application struct {
 	docs       map[string]*document
 	docOrder   []string
 	server     *http.Server
+	updates    updateState
 }
 
 func secretString() (string, error) {
@@ -141,6 +143,7 @@ func (a *application) secure(next http.HandlerFunc) http.HandlerFunc {
 }
 func (a *application) routes() http.Handler {
 	mux := http.NewServeMux()
+	a.updateRoutes(mux)
 	mux.HandleFunc("/api/health", a.secure(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
 			jsonError(w, 405, "Method not allowed")
@@ -328,8 +331,14 @@ func (a *application) compile(ctx context.Context, req compileRequest) (compilat
 	if err := validShader(req.Source, req.Entry); err != nil {
 		return compilation{}, err
 	}
-	key := sha256.Sum256([]byte(req.Entry + "\x00" + req.Source))
-	hash := hex.EncodeToString(key[:])
+	mode := req.Mode
+	if mode == "" {
+		mode = "fast"
+	}
+	if mode != "fast" && mode != "optimized" {
+		return compilation{}, errors.New("invalid compiler optimization mode")
+	}
+	hash := compilerKey(a.root, req.Source, req.Entry+":"+mode)
 	a.cacheMu.Lock()
 	defer a.cacheMu.Unlock() // Serialize bounded compiler jobs and avoid duplicate concurrent work.
 	if c, ok := a.cache[hash]; ok {
@@ -337,6 +346,10 @@ func (a *application) compile(ctx context.Context, req compileRequest) (compilat
 		c.CompileMs = 0
 		c.DxcMs = 0
 		c.NagaMs = 0
+		return c, nil
+	}
+	if c, ok := loadCompilerCache(a.root, hash); ok {
+		a.cache[hash] = c
 		return c, nil
 	}
 	temp, err := os.MkdirTemp("", "sunder-hlsl-")
@@ -353,7 +366,11 @@ func (a *application) compile(ctx context.Context, req compileRequest) (compilat
 	start := time.Now()
 	dxc := filepath.Join(a.root, "tools", "dxc", "dxc.exe")
 	naga := filepath.Join(a.root, "tools", "naga", "naga.exe")
-	dxcLog, err := runTool(ctx, dxc, "-spirv", "-fspv-target-env=vulkan1.1", "-T", "cs_6_0", "-E", req.Entry, "-Fo", spv, "-fvk-t-shift", "0", "0", "-fvk-u-shift", "16", "0", "-fvk-b-shift", "32", "0", "-fvk-s-shift", "48", "0", in)
+	optFlag := "-O1" // Shorter DXC passes for interactive editing; browser GPU still validates WGSL.
+	if mode == "optimized" {
+		optFlag = "-O3"
+	}
+	dxcLog, err := runTool(ctx, dxc, optFlag, "-spirv", "-fspv-target-env=vulkan1.1", "-T", "cs_6_0", "-E", req.Entry, "-Fo", spv, "-fvk-t-shift", "0", "0", "-fvk-u-shift", "16", "0", "-fvk-b-shift", "32", "0", "-fvk-s-shift", "48", "0", in)
 	if err != nil {
 		return compilation{}, fmt.Errorf("DXC: %w", err)
 	}
@@ -376,6 +393,7 @@ func (a *application) compile(ctx context.Context, req compileRequest) (compilat
 	ms := time.Since(start).Milliseconds()
 	c := compilation{WGSL: string(wgsl), Log: strings.TrimSpace(dxcLog + "\n" + nagaLog), Toolchain: "Go / Microsoft DXC / Naga / WebGPU", Mapping: map[string]int{"t0": 0, "u0": 16, "b0": 32, "s0": 48}, CacheHit: false, CompileMs: ms, DxcMs: dxcTime, NagaMs: ms - dxcTime}
 	a.cache[hash] = c
+	saveCompilerCache(a.root, hash, c)
 	a.cacheOrder = append(a.cacheOrder, hash)
 	if len(a.cacheOrder) > 8 {
 		delete(a.cache, a.cacheOrder[0])
@@ -684,6 +702,11 @@ func run() error {
 	var openFile string
 	var noBrowser, stop, register, unregister bool
 	var port int
+	var applyUpdate, updateTarget string
+	var parentPID int
+	flag.StringVar(&applyUpdate, "apply-update", "", "Apply a verified staged delta update")
+	flag.StringVar(&updateTarget, "target", "", "Update target installation path")
+	flag.IntVar(&parentPID, "parent-pid", 0, "Process being updated")
 	flag.StringVar(&openFile, "open", "", "Open an existing .hlsl or .hlsli file in a browser tab")
 	flag.BoolVar(&noBrowser, "no-browser", false, "Do not launch a browser")
 	flag.BoolVar(&stop, "stop", false, "Stop the running persistent server")
@@ -691,6 +714,9 @@ func run() error {
 	flag.BoolVar(&unregister, "unregister", false, "Unregister file association")
 	flag.IntVar(&port, "port", defaultPort, "Localhost TCP port")
 	flag.Parse()
+	if applyUpdate != "" {
+		return applyUpdateHelper(applyUpdate, updateTarget, parentPID)
+	}
 	if port < 1024 || port > 65535 {
 		return errors.New("invalid port")
 	}

@@ -11,7 +11,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: sunder-go-v2.0.0-release
+  group: sunder-go-v2.1.0-release
   cancel-in-progress: false
 
 jobs:
@@ -85,7 +85,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Could not restore Windows icon resource' }
           }
           Push-Location go-server
-          go build -trimpath -ldflags="-s -w -H windowsgui" -o '../HLSLWorkbench.exe' .
+          go build -trimpath -ldflags="-s -w -H windowsgui -X main.appVersion=v2.1.0" -o '../HLSLWorkbench.exe' .
           if ($LASTEXITCODE -ne 0) { throw 'Windows Go build failed' }
           Pop-Location
       - name: Smoke-test actual DXC to Naga translation
@@ -106,7 +106,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $name = 'Sunder-HLSL-Workbench-Go-Violet-IDE-Windows-x64'
+          $name = 'Sunder-HLSL-Workbench-Go-v2.1.0-Windows-x64'
           $stage = Join-Path $env:RUNNER_TEMP $name
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           $top = @(
@@ -166,29 +166,49 @@ jobs:
           $hash = (Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash.ToLowerInvariant()
           "$hash  $name.zip" | Set-Content -LiteralPath ($zip + '.sha256') -Encoding ascii
           Write-Host "Prepared $zip ($hash)"
-      - name: Publish v2.0.0 GitHub Release with Windows asset
+          # Publish each managed app file independently for delta updates.
+          $deltaDir = Join-Path $PWD 'release-delta-assets'
+          python scripts/build_update_manifest.py $stage 'v2.1.0' $deltaDir
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to create per-file delta manifest' }
+          $manifest = Get-Content -LiteralPath (Join-Path $deltaDir 'sunder-update-manifest.json') -Raw | ConvertFrom-Json
+          if ($manifest.files.Count -lt 10) { throw 'Update manifest has too few files' }
+      - name: Publish v2.1.0 GitHub Release with per-file update assets
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $tag = 'v2.0.0'
+          $tag = 'v2.1.0'
           gh release view $tag --repo $env:GITHUB_REPOSITORY --json tagName 2>$null | Out-Null
           if ($LASTEXITCODE -eq 0) { throw "Release $tag already exists; refusing to overwrite it" }
           @'
-          Sunder HLSL Workbench Go Edition with the violet IDE redesign.
+          Sunder HLSL Workbench v2.1.0: verified incremental updates, higher-resolution HLSL output, GPU-native preview and faster repeat compilation.
 
           - Standalone, persistent localhost Go server (closing a browser tab does not stop it).
           - Branded Windows executable with embedded icon.
           - Optional .hlsl/.hlsli Open with registration and safe on-disk editing.
           - Violet IDE with shader editor, autocomplete, HLSL docs, GPU preview and diagnostics.
-          - Bundled CodeMirror, DXC and Naga: users do not need Go, Node or PowerShell.
+          - Download only files whose SHA-256 differs, then confirm restart/install.
+          - Max FPS mode with direct WebGPU storage-buffer preview and periodic statistics.
+          - Framebuffer sizes 1–2048 per axis (64 MiB float4 cap and GPU device limits).
+          - DXC fast-edit (-O1) or optimized (-O3) modes and persistent compilation cache.
+          - Bundled CodeMirror, DXC and Naga: no Go, Node or PowerShell required at runtime.
 
           The downloadable Windows x64 ZIP was rebuilt by GitHub Actions from this
           release's source; Go unit tests and real DXC-to-Naga smoke translation passed.
           WebGPU operation depends on the user's graphics hardware and browser.
           Native GPU/driver performance remains unqualified.
           '@ | Set-Content -LiteralPath 'SUNDER-GO-RELEASE-NOTES.md' -Encoding utf8
-          $zip = 'Sunder-HLSL-Workbench-Go-Violet-IDE-Windows-x64.zip'
-          gh release create $tag $zip ($zip + '.sha256') --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title 'Sunder HLSL Workbench v2.0.0 — Go + Violet IDE' --notes-file SUNDER-GO-RELEASE-NOTES.md --latest
-          if ($LASTEXITCODE -ne 0) { throw 'GitHub release publication failed' }
+          $zip = 'Sunder-HLSL-Workbench-Go-v2.1.0-Windows-x64.zip'
+          # Publish as draft until every delta asset is uploaded successfully.
+          $deltaDir = Join-Path $PWD 'release-delta-assets'
+          $manifestFile = Join-Path $deltaDir 'sunder-update-manifest.json'
+          gh release create $tag $zip ($zip + '.sha256') $manifestFile --repo $env:GITHUB_REPOSITORY --target $env:GITHUB_SHA --title 'Sunder HLSL Workbench v2.1.0 — Delta Updates & GPU Performance' --notes-file SUNDER-GO-RELEASE-NOTES.md --draft
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to create draft release' }
+          foreach ($asset in @(Get-ChildItem -LiteralPath $deltaDir -Filter 'delta-*.bin' -File)) {
+            gh release upload $tag $asset.FullName --repo $env:GITHUB_REPOSITORY
+            if ($LASTEXITCODE -ne 0) { throw ("Failed to upload delta asset: " + $asset.Name) }
+          }
+          gh release edit $tag --repo $env:GITHUB_REPOSITORY --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw 'Failed to publish complete release' }
+          Write-Host ("Published "+$tag+" with "+@(Get-ChildItem -LiteralPath $deltaDir -Filter 'delta-*.bin' -File).Count+" delta assets")
