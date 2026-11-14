@@ -34,15 +34,15 @@
     if (!expanded) focusEditor();
   });
   function closeMenus() {
-    for (const id of ['advanced-actions','workspace-settings','editor-actions']) {
+    for (const id of ['advanced-actions','workspace-settings','editor-actions','update-menu']) {
       const element=$(id);if(element)element.open=false;
     }
   }
   // Only one popup menu should remain open at once.
-  for (const id of ['advanced-actions','workspace-settings','editor-actions']) {
+  for (const id of ['advanced-actions','workspace-settings','editor-actions','update-menu']) {
     $(id)?.addEventListener('toggle',event => {
       if (!event.target.open)return;
-      for (const sibling of ['advanced-actions','workspace-settings','editor-actions'])
+      for (const sibling of ['advanced-actions','workspace-settings','editor-actions','update-menu'])
         if(sibling!==id&&$(sibling))$(sibling).open=false;
     });
   }
@@ -63,6 +63,33 @@
       if(document.querySelector('.workbench.preview-maximized')) $('preview-expand')?.click();
     }
   },true);
+
+  // Framebuffer dimensions belong to HLSL defines, not just a preview scale.
+  const getDimensions=()=>{
+    const m=source().match(/^\s*#\s*define\s+WORKBENCH_WIDTH\s+(\d+)/m);
+    const n=source().match(/^\s*#\s*define\s+WORKBENCH_HEIGHT\s+(\d+)/m);
+    if(m&&n){$('shader-width').value=m[1];$('shader-height').value=n[1];}
+  };
+  const applyDimensions=()=>{
+    const w=Number($('shader-width').value),h=Number($('shader-height').value);
+    if(!Number.isInteger(w)||!Number.isInteger(h)||w<1||h<1||w>2048||h>2048||w*h*16>64*1024*1024){
+      alert('Use 1–2048 per dimension; the float4 framebuffer may not exceed 64 MiB.');return;
+    }
+    const before=source();
+    if(!/^\s*#\s*define\s+WORKBENCH_WIDTH\s+\d+/m.test(before)||
+       !/^\s*#\s*define\s+WORKBENCH_HEIGHT\s+\d+/m.test(before)){
+      alert('This shader has no WORKBENCH_WIDTH/HEIGHT definitions.');return;
+    }
+    const after=before.replace(/(^\s*#\s*define\s+WORKBENCH_WIDTH\s+)\d+/m,'$1'+w)
+      .replace(/(^\s*#\s*define\s+WORKBENCH_HEIGHT\s+)\d+/m,'$1'+h);
+    const cm=window.HLSLFoldDocs?.editor;
+    if(cm)cm.setValue(after);else{editor.value=after;editor.dispatchEvent(new Event('input',{bubbles:true}));}
+    window.HLSLAnimation?.stop();
+    focusEditor();
+  };
+  $('apply-resolution')?.addEventListener('click',applyDimensions);
+  editor.addEventListener('input',()=>{if(document.activeElement!==$('shader-width')&&document.activeElement!==$('shader-height'))getDimensions();});
+  getDimensions();
 
   // Counters are sourced from the running GPU animation, never invented values.
   const syncMetrics=()=>{
